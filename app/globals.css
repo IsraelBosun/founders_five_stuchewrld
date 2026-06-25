@@ -1,26 +1,179 @@
 @import "tailwindcss";
 
+/* ── Design tokens ── */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --bg-primary: #0A0A0A;
+  --bg-secondary: #111111;
+  --bg-tertiary: #050505;
+  --text-primary: #F5E6D3;
+  --text-body: #E8E8E8;
+  --text-muted: #888888;
+  --text-faint: #666666;
+  --divider: rgba(255, 255, 255, 0.06);
+
+  /* Page padding — used site-wide for consistent margins */
+  --page-px: 3rem;       /* 48px */
+  --page-px-sm: 1.25rem; /* 20px on mobile */
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
+@media (max-width: 640px) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --page-px: var(--page-px-sm);
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/* ── Tailwind custom colors (layered so utilities can override) ── */
+@theme {
+  --color-cream: #F5E6D3;
+  --color-body: #E8E8E8;
+  --color-muted: #888888;
+  --color-faint: #666666;
+  --color-surface: #111111;
+  --color-deep: #050505;
+}
+
+/* ── Base styles — kept inside @layer so utilities always win ── */
+@layer base {
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+
+  html {
+    background-color: var(--bg-primary);
+    color: var(--text-body);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    background-color: var(--bg-primary);
+    color: var(--text-body);
+    min-height: 100vh;
+  }
+}
+
+/* ── Layout helpers ── */
+
+/* Full-width section — background spans viewport, content is contained */
+.container {
+  max-width: 1440px;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 3rem;
+  padding-right: 3rem;
+}
+
+@media (max-width: 640px) {
+  .container {
+    padding-left: 1.25rem;
+    padding-right: 1.25rem;
+  }
+}
+
+/* Legacy alias used in some components */
+.section-pad {
+  padding-left: 3rem;
+  padding-right: 3rem;
+  max-width: 1440px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+@media (max-width: 640px) {
+  .section-pad {
+    padding-left: 1.25rem;
+    padding-right: 1.25rem;
+  }
+}
+
+/* ── Scrollbar ── */
+.no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* ── Marquee ── */
+@keyframes marquee {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+
+.marquee-track {
+  animation: marquee 28s linear infinite;
+  display: flex;
+  align-items: center;
+  gap: 4rem;
+  white-space: nowrap;
+}
+
+.marquee-track:hover {
+  animation-play-state: paused;
+}
+
+/* ── Polaroid ── */
+.polaroid {
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+.polaroid:hover {
+  transform: rotate(0deg) scale(1.03) !important;
+  box-shadow: 0 24px 48px rgba(0, 0, 0, 0.6);
+  z-index: 10;
+}
+
+/* ── Work card ── */
+.work-card {
+  transition: transform 0.4s ease;
+}
+.work-card:hover {
+  transform: translateY(-4px);
+}
+
+/* ── Responsive nav ── */
+.mobile-menu-btn { display: flex; }
+@media (min-width: 768px) {
+  .mobile-menu-btn { display: none !important; }
+  .desktop-nav    { display: flex !important; }
+}
+@media (max-width: 767px) {
+  .desktop-nav { display: none !important; }
+}
+
+/* ── Footer link hover ── */
+.footer-link:hover {
+  color: #F5E6D3 !important;
+}
+
+/* ── Marquee name hover ── */
+.client-name:hover {
+  color: rgba(245,230,211,0.8) !important;
+}
+
+/* ── Nav link hover ── */
+.nav-link:hover {
+  color: #F5E6D3 !important;
+}
+
+/* ── Next project card ── */
+.next-project-card {
+  transition: opacity 0.3s ease;
+}
+.next-project-card:hover {
+  opacity: 0.75;
+}
+
+/* ── CTA button ── */
+.btn-outline {
+  border: 1px solid rgba(245, 230, 211, 0.4);
+  color: #F5E6D3;
+  transition: border-color 0.2s ease, background-color 0.2s ease;
+  cursor: pointer;
+}
+.btn-outline:hover {
+  border-color: #F5E6D3;
+  background-color: rgba(245, 230, 211, 0.05);
 }
