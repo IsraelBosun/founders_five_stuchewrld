@@ -83,9 +83,10 @@ function VideoCard({ project }) {
 
 export default function SelectedWork({ projects = [] }) {
   const [active, setActive] = useState("ALL");
+  const reelProjects = projects.filter((p) => p.category !== "BTS");
 
   const visible =
-    active === "ALL" ? projects : projects.filter((p) => p.category === active);
+    active === "ALL" ? reelProjects : reelProjects.filter((p) => p.category === active);
 
   return (
     <section id="work" style={{ background: "#0A0A0A", paddingTop: "6rem" }}>

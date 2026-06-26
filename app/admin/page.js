@@ -101,7 +101,7 @@ function Shell({ tab, setTab, onLogout, children }) {
         <span className="font-mono text-xs tracking-[0.2em] text-[#666] uppercase">STUCHEWRLD / Admin</span>
         <div className="flex items-center gap-6">
           <nav className="flex gap-4">
-            {['projects', 'logos'].map(t => (
+            {['projects', 'bts', 'logos'].map(t => (
               <button
                 key={t}
                 onClick={() => setTab(t)}
@@ -386,8 +386,10 @@ function VideoUpload({ label, field, slug, projectId, value, thumbnail, onChange
                 </div>
               </div>
             </div>
-          ) : (
+          ) : value ? (
             <video src={value} controls playsInline preload="metadata" className="w-full" style={{ maxHeight: '220px', display: 'block' }} />
+          ) : (
+            <div className="p-4 text-[#666] text-xs">Video uploaded. Saving preview...</div>
           )}
           <div className="flex items-center justify-between px-3 py-2">
             <p className="text-[#666] text-xs truncate max-w-xs">{filename || value?.split('/').pop()}</p>
@@ -657,6 +659,187 @@ function ProjectForm({ initial, onSave, onCancel, saving, onAutoSave }) {
 
 // ─── Logo Manager ─────────────────────────────────────────────────────────────
 
+function BtsManager({ items, onRefresh }) {
+  const [title, setTitle] = useState('');
+  const [label, setLabel] = useState('');
+  const [year, setYear] = useState(new Date().getFullYear().toString());
+  const [sortOrder, setSortOrder] = useState('99');
+  const [published, setPublished] = useState(true);
+  const [videoUrl, setVideoUrl] = useState('');
+  const [thumbnailUrl, setThumbnailUrl] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+
+  const slug = title ? `bts-${slugify(title)}` : 'bts-video';
+
+  async function save(e) {
+    e.preventDefault();
+    if (!title.trim() || !videoUrl) {
+      setError('Title and video are required.');
+      return;
+    }
+
+    setError('');
+    setSaving(true);
+
+    const { error: insertErr } = await supabase.from('projects').insert({
+      slug: `${slug}-${Date.now()}`,
+      title: title.trim(),
+      client: 'STUCHEWRLD Inc.',
+      category: 'BTS',
+      label: label.trim() || `BTS - ${year}`,
+      year,
+      gradient: 'linear-gradient(135deg, #12110d 0%, #0b0d10 48%, #050608 100%)',
+      hero_gradient: 'linear-gradient(160deg, #17140d 0%, #0b0d10 42%, #050608 100%)',
+      synopsis: 'A behind-the-scenes cut from the STUCHEWRLD archive.',
+      story: 'Raw process footage from the work behind the frame.',
+      credits: { Producer: 'STUCHEWRLD Inc.', Type: 'Behind the scenes', Year: year },
+      testimonial: null,
+      sort_order: parseInt(sortOrder) || 99,
+      published,
+      video_url: videoUrl,
+      thumbnail_url: thumbnailUrl || null,
+    });
+
+    setSaving(false);
+    if (insertErr) {
+      setError(insertErr.message);
+      return;
+    }
+
+    setTitle('');
+    setLabel('');
+    setYear(new Date().getFullYear().toString());
+    setSortOrder('99');
+    setPublished(true);
+    setVideoUrl('');
+    setThumbnailUrl('');
+    onRefresh();
+  }
+
+  async function deleteItem(item) {
+    if (!confirm(`Delete "${item.title}"? This removes the BTS record and its R2 video files.`)) return;
+    const keys = [item.video_url, item.thumbnail_url].filter(Boolean).map(url => url.split('/').pop());
+
+    if (keys.length > 0) {
+      const res = await fetch('/api/r2-delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ keys }),
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        alert('Could not delete R2 files:\n' + (json.error || 'Delete failed'));
+        return;
+      }
+    }
+
+    await supabase.from('projects').delete().eq('id', item.id);
+    onRefresh();
+  }
+
+  return (
+    <div className="p-6 max-w-4xl">
+      <form onSubmit={save} className="border border-white/6 rounded-lg p-6 mb-8 space-y-5">
+        <p className="font-mono text-xs text-[#666] uppercase tracking-widest">Upload BTS video</p>
+        {error && <p className="text-red-400 text-xs">{error}</p>}
+
+        <div className="grid grid-cols-2 gap-4">
+          <div className="col-span-2">
+            <label className="font-mono text-xs text-[#666] uppercase tracking-widest block mb-2">Title</label>
+            <input
+              value={title}
+              onChange={e => setTitle(e.target.value)}
+              placeholder="e.g. Access Holdings BTS"
+              className="w-full bg-[#111] border border-white/10 rounded px-3 py-2 text-sm text-[#e8e8e8] outline-none focus:border-white/30"
+            />
+          </div>
+          <div>
+            <label className="font-mono text-xs text-[#666] uppercase tracking-widest block mb-2">Label</label>
+            <input
+              value={label}
+              onChange={e => setLabel(e.target.value)}
+              placeholder="BTS - ACCESS HOLDINGS"
+              className="w-full bg-[#111] border border-white/10 rounded px-3 py-2 text-sm text-[#e8e8e8] outline-none focus:border-white/30"
+            />
+          </div>
+          <div>
+            <label className="font-mono text-xs text-[#666] uppercase tracking-widest block mb-2">Year</label>
+            <input
+              value={year}
+              onChange={e => setYear(e.target.value)}
+              className="w-full bg-[#111] border border-white/10 rounded px-3 py-2 text-sm text-[#e8e8e8] outline-none focus:border-white/30"
+            />
+          </div>
+          <div>
+            <label className="font-mono text-xs text-[#666] uppercase tracking-widest block mb-2">Sort order</label>
+            <input
+              type="number"
+              value={sortOrder}
+              onChange={e => setSortOrder(e.target.value)}
+              className="w-full bg-[#111] border border-white/10 rounded px-3 py-2 text-sm text-[#e8e8e8] outline-none focus:border-white/30"
+            />
+          </div>
+          <div className="flex items-end">
+            <button
+              type="button"
+              onClick={() => setPublished(v => !v)}
+              className={`text-xs px-3 py-2 rounded ${published ? 'bg-green-900/40 text-green-400' : 'bg-white/5 text-[#666]'}`}
+            >
+              {published ? 'Live in Off Camera' : 'Draft'}
+            </button>
+          </div>
+        </div>
+
+        <VideoUpload
+          label="BTS video (MP4)"
+          field="video_url"
+          slug={slug}
+          value={videoUrl}
+          thumbnail={thumbnailUrl}
+          onChange={setVideoUrl}
+          onThumbnailChange={setThumbnailUrl}
+        />
+
+        <button
+          type="submit"
+          disabled={saving || !title.trim() || !videoUrl}
+          className="bg-[#f5e6d3] text-[#0a0a0a] px-5 py-2.5 text-xs font-medium rounded disabled:opacity-40"
+        >
+          {saving ? 'Saving...' : 'Save BTS video'}
+        </button>
+      </form>
+
+      {items.length === 0 ? (
+        <p className="text-[#666] text-sm">No BTS videos yet.</p>
+      ) : (
+        <div className="space-y-2">
+          <p className="font-mono text-xs text-[#666] uppercase tracking-widest mb-4">Uploaded BTS videos</p>
+          {items.map(item => (
+            <div key={item.id} className="flex items-center gap-4 border border-white/6 rounded px-4 py-3">
+              <div className="flex-shrink-0 bg-white/5 rounded overflow-hidden" style={{ width: '140px', height: '78px' }}>
+                {item.thumbnail_url ? (
+                  <img src={item.thumbnail_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                ) : (
+                  <video src={item.video_url} muted playsInline preload="metadata" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                )}
+              </div>
+              <div className="flex-1">
+                <p className="text-sm text-[#e8e8e8]">{item.title}</p>
+                <p className="font-mono text-xs text-[#666]">{item.label} / order: {item.sort_order}</p>
+              </div>
+              <span className={`text-xs px-2 py-1 rounded ${item.published ? 'bg-green-900/40 text-green-400' : 'bg-white/5 text-[#666]'}`}>
+                {item.published ? 'Live' : 'Draft'}
+              </span>
+              <button onClick={() => deleteItem(item)} className="text-red-800 hover:text-red-500 text-xs">Delete</button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function LogoManager({ logos, onRefresh }) {
   const [name, setName] = useState('');
   const [sortOrder, setSortOrder] = useState('99');
@@ -827,6 +1010,7 @@ export default function AdminPage() {
   const [session, setSession] = useState(undefined);
   const [tab, setTab] = useState('projects');
   const [projects, setProjects] = useState([]);
+  const [btsItems, setBtsItems] = useState([]);
   const [logos, setLogos] = useState([]);
   const [editing, setEditing] = useState(null);
   const [saving, setSaving] = useState(false);
@@ -838,12 +1022,17 @@ export default function AdminPage() {
   }, []);
 
   useEffect(() => {
-    if (session) { fetchProjects(); fetchLogos(); }
+    if (session) { fetchProjects(); fetchBtsItems(); fetchLogos(); }
   }, [session]);
 
   async function fetchProjects() {
-    const { data } = await supabase.from('projects').select('*').order('sort_order');
+    const { data } = await supabase.from('projects').select('*').neq('category', 'BTS').order('sort_order');
     setProjects(data ?? []);
+  }
+
+  async function fetchBtsItems() {
+    const { data } = await supabase.from('projects').select('*').eq('category', 'BTS').order('sort_order');
+    setBtsItems(data ?? []);
   }
 
   async function fetchLogos() {
@@ -913,6 +1102,9 @@ export default function AdminPage() {
           onToggle={togglePublished}
           onDelete={deleteProject}
         />
+      )}
+      {tab === 'bts' && (
+        <BtsManager items={btsItems} onRefresh={fetchBtsItems} />
       )}
       {tab === 'logos' && (
         <LogoManager logos={logos} onRefresh={fetchLogos} />

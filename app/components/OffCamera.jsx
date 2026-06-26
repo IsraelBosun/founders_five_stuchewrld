@@ -1,4 +1,5 @@
 import Image from "next/image";
+import { supabase } from "../../lib/supabase";
 
 const polaroids = [
   { src: "/bts/photo_1.jpeg", label: "SET · A4:24", rotate: "-2deg" },
@@ -11,7 +12,15 @@ const polaroids = [
   { src: "/bts/photo_8.jpeg", label: "WRAP", rotate: "2.5deg" },
 ];
 
-export default function OffCamera() {
+export default async function OffCamera() {
+  const { data: btsVideos } = await supabase
+    .from("projects")
+    .select("slug, title, label, year, video_url, thumbnail_url")
+    .eq("published", true)
+    .eq("category", "BTS")
+    .order("sort_order", { ascending: true })
+    .limit(2);
+
   return (
     <section
       id="off-camera"
@@ -66,6 +75,68 @@ export default function OffCamera() {
         Behind every cinematic frame is a mess of cables, coffee cups, and
         creative chaos. This is where the magic actually happens.
       </p>
+
+      {(btsVideos?.length > 0) && (
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
+            gap: "1rem",
+            marginBottom: "4rem",
+          }}
+        >
+          {btsVideos.map((video) => (
+            <article
+              key={video.slug}
+              style={{
+                background: "#0A0A0A",
+                border: "1px solid rgba(255,255,255,0.06)",
+                overflow: "hidden",
+              }}
+            >
+              <video
+                src={video.video_url}
+                poster={video.thumbnail_url || undefined}
+                controls
+                playsInline
+                preload="metadata"
+                style={{
+                  width: "100%",
+                  aspectRatio: "16 / 9",
+                  objectFit: "cover",
+                  display: "block",
+                  background: "#050505",
+                }}
+              />
+              <div style={{ padding: "0.85rem 1rem 1rem" }}>
+                <p
+                  style={{
+                    fontFamily: "var(--font-mono)",
+                    letterSpacing: "0.14em",
+                    fontSize: "9px",
+                    color: "#666666",
+                    textTransform: "uppercase",
+                    marginBottom: "0.35rem",
+                  }}
+                >
+                  {video.label || `BTS - ${video.year}`}
+                </p>
+                <h3
+                  style={{
+                    fontFamily: "var(--font-display)",
+                    fontSize: "20px",
+                    fontWeight: 500,
+                    color: "#F5E6D3",
+                    lineHeight: 1.15,
+                  }}
+                >
+                  {video.title}
+                </h3>
+              </div>
+            </article>
+          ))}
+        </div>
+      )}
 
       {/* Polaroid grid */}
       <div
