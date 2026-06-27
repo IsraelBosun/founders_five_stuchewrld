@@ -9,6 +9,9 @@ const supabase = createClient(
 );
 
 const CATEGORIES = ['MUSIC', 'BRAND', 'CORPORATE', 'EVENTS', 'OUTREACH', 'BTS'];
+const VIDEO_CDN = process.env.NEXT_PUBLIC_VIDEO_CDN;
+const BANNER_VIDEO_KEY = 'banner-hero.mp4';
+const BANNER_POSTER_KEY = 'banner-hero-poster.jpg';
 
 function slugify(str) {
   return str.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
@@ -101,7 +104,7 @@ function Shell({ tab, setTab, onLogout, children }) {
         <span className="font-mono text-xs tracking-[0.2em] text-[#666] uppercase">STUCHEWRLD / Admin</span>
         <div className="flex items-center gap-6">
           <nav className="flex gap-4">
-            {['projects', 'bts', 'logos'].map(t => (
+            {['projects', 'banner', 'bts', 'logos'].map(t => (
               <button
                 key={t}
                 onClick={() => setTab(t)}
@@ -226,7 +229,7 @@ function captureVideoFrame(file) {
   });
 }
 
-function VideoUpload({ label, field, slug, projectId, value, thumbnail, onChange, onThumbnailChange, onAutoSave }) {
+function VideoUpload({ label, field, slug, projectId, value, thumbnail, videoKey: customVideoKey, thumbKey: customThumbKey, deleteKeys, onChange, onThumbnailChange, onAutoSave }) {
   const [progress, setProgress] = useState(null);
   const [convertProgress, setConvertProgress] = useState(0);
   const [status, setStatus] = useState('');
@@ -242,7 +245,7 @@ function VideoUpload({ label, field, slug, projectId, value, thumbnail, onChange
     if (!confirm('Delete this video? It will be permanently removed from Cloudflare R2 and cannot be undone.')) return;
     setDeleting(true);
 
-    const keys = [value, thumbnail].filter(Boolean).map(url => url.split('/').pop());
+    const keys = deleteKeys || [value, thumbnail].filter(Boolean).map(url => url.split('/').pop());
     try {
       if (keys.length > 0) {
         const res = await fetch('/api/r2-delete', {
@@ -299,8 +302,8 @@ function VideoUpload({ label, field, slug, projectId, value, thumbnail, onChange
       thumbBlob = null;
     }
     const videoContentType = 'video/mp4';
-    const videoKey = `${slug || 'project'}-${field === 'video_url' ? 'full' : 'preview'}.mp4`;
-    const thumbKey = `${slug || 'project'}-poster.jpg`;
+    const videoKey = customVideoKey || `${slug || 'project'}-${field === 'video_url' ? 'full' : 'preview'}.mp4`;
+    const thumbKey = customThumbKey || `${slug || 'project'}-poster.jpg`;
 
     let videoPresign, thumbPresign;
     try {
@@ -658,6 +661,84 @@ function ProjectForm({ initial, onSave, onCancel, saving, onAutoSave }) {
 }
 
 // ─── Logo Manager ─────────────────────────────────────────────────────────────
+
+function BannerManager() {
+  const defaultVideoUrl = VIDEO_CDN ? `${VIDEO_CDN}/${BANNER_VIDEO_KEY}` : '';
+  const defaultPosterUrl = VIDEO_CDN ? `${VIDEO_CDN}/${BANNER_POSTER_KEY}` : '';
+  const [videoUrl, setVideoUrl] = useState('');
+  const [posterUrl, setPosterUrl] = useState('');
+
+  useEffect(() => {
+    const storedVideoUrl = localStorage.getItem('stuche-banner-video-url') || '';
+    const storedPosterUrl = localStorage.getItem('stuche-banner-poster-url') || '';
+    setVideoUrl(storedVideoUrl);
+    setPosterUrl(storedPosterUrl);
+
+    if (!VIDEO_CDN) return;
+
+    fetch(defaultVideoUrl, { method: 'HEAD' })
+      .then(res => {
+        if (res.ok) setVideoUrl(defaultVideoUrl);
+      })
+      .catch(() => {});
+
+    fetch(defaultPosterUrl, { method: 'HEAD' })
+      .then(res => {
+        if (res.ok) setPosterUrl(defaultPosterUrl);
+      })
+      .catch(() => {});
+  }, [defaultPosterUrl, defaultVideoUrl]);
+
+  function saveVideoUrl(url) {
+    setVideoUrl(url);
+    if (url) localStorage.setItem('stuche-banner-video-url', url);
+    else localStorage.removeItem('stuche-banner-video-url');
+  }
+
+  function savePosterUrl(url) {
+    setPosterUrl(url);
+    if (url) localStorage.setItem('stuche-banner-poster-url', url);
+    else localStorage.removeItem('stuche-banner-poster-url');
+  }
+
+  return (
+    <div className="p-6 max-w-3xl">
+      <div className="border border-white/6 rounded-lg p-6 space-y-5">
+        <div>
+          <p className="font-mono text-xs text-[#666] uppercase tracking-widest">Homepage banner video</p>
+          <p className="text-[#888] text-sm mt-3 leading-6">
+            Upload the hero banner video here. It replaces the file the homepage uses automatically.
+          </p>
+        </div>
+
+        {!VIDEO_CDN && (
+          <p className="text-red-400 text-xs">
+            NEXT_PUBLIC_VIDEO_CDN is not set, so the homepage cannot load the banner after upload.
+          </p>
+        )}
+
+        <VideoUpload
+          label="Banner video (MP4)"
+          field="video_url"
+          slug="banner"
+          value={videoUrl}
+          thumbnail={posterUrl}
+          videoKey={BANNER_VIDEO_KEY}
+          thumbKey={BANNER_POSTER_KEY}
+          deleteKeys={[BANNER_VIDEO_KEY, BANNER_POSTER_KEY]}
+          onChange={saveVideoUrl}
+          onThumbnailChange={savePosterUrl}
+        />
+
+        <div className="border-t border-white/6 pt-5 space-y-2">
+          <p className="font-mono text-xs text-[#666] uppercase tracking-widest">Homepage reads</p>
+          <p className="text-[#666] text-xs break-all">{defaultVideoUrl || 'Set NEXT_PUBLIC_VIDEO_CDN first'}</p>
+          <p className="text-[#666] text-xs break-all">{defaultPosterUrl || 'Set NEXT_PUBLIC_VIDEO_CDN first'}</p>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function BtsManager({ items, onRefresh }) {
   const [title, setTitle] = useState('');
@@ -1102,6 +1183,9 @@ export default function AdminPage() {
           onToggle={togglePublished}
           onDelete={deleteProject}
         />
+      )}
+      {tab === 'banner' && (
+        <BannerManager />
       )}
       {tab === 'bts' && (
         <BtsManager items={btsItems} onRefresh={fetchBtsItems} />
