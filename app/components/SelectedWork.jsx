@@ -167,6 +167,9 @@ export default function SelectedWork({ projects = [] }) {
         className="no-scrollbar"
         style={{
           overflowX: "auto",
+          maxWidth: "1440px",
+          marginLeft: "auto",
+          marginRight: "auto",
           paddingLeft: "var(--page-px)",
           paddingRight: "var(--page-px)",
           paddingBottom: "5rem",
