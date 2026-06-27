@@ -1,4 +1,32 @@
+"use client";
+
+import { useEffect, useRef, useState } from "react";
+
 export default function Hero({ bannerVideoUrl, bannerPosterUrl }) {
+  const [isPlayerOpen, setIsPlayerOpen] = useState(false);
+  const playerRef = useRef(null);
+
+  useEffect(() => {
+    if (!isPlayerOpen) return;
+
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    const handleKeyDown = (event) => {
+      if (event.key === "Escape") {
+        setIsPlayerOpen(false);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    playerRef.current?.play?.().catch(() => {});
+
+    return () => {
+      document.body.style.overflow = originalOverflow;
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isPlayerOpen]);
+
   return (
     <section
       style={{
@@ -94,17 +122,20 @@ export default function Hero({ bannerVideoUrl, bannerPosterUrl }) {
           <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
             <button
               aria-label="Play showreel"
+              disabled={!bannerVideoUrl}
+              onClick={() => setIsPlayerOpen(true)}
               style={{
                 width: "40px",
                 height: "40px",
                 borderRadius: "50%",
                 border: "1px solid rgba(245,230,211,0.3)",
                 background: "none",
-                cursor: "pointer",
+                cursor: bannerVideoUrl ? "pointer" : "not-allowed",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
                 flexShrink: 0,
+                opacity: bannerVideoUrl ? 1 : 0.45,
               }}
             >
               <svg width="10" height="12" viewBox="0 0 10 12" fill="#F5E6D3">
@@ -138,6 +169,64 @@ export default function Hero({ bannerVideoUrl, bannerPosterUrl }) {
         </div>
 
       </div>
+      {isPlayerOpen && bannerVideoUrl && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Showreel video player"
+          onClick={() => setIsPlayerOpen(false)}
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 100,
+            background: "rgba(0,0,0,0.92)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "clamp(1rem, 4vw, 3rem)",
+          }}
+        >
+          <button
+            type="button"
+            aria-label="Close showreel"
+            onClick={() => setIsPlayerOpen(false)}
+            style={{
+              position: "absolute",
+              top: "clamp(1rem, 3vw, 2rem)",
+              right: "clamp(1rem, 3vw, 2rem)",
+              width: "42px",
+              height: "42px",
+              borderRadius: "50%",
+              border: "1px solid rgba(245,230,211,0.35)",
+              background: "rgba(10,10,10,0.55)",
+              color: "#F5E6D3",
+              cursor: "pointer",
+              fontFamily: "var(--font-mono)",
+              fontSize: "16px",
+              lineHeight: 1,
+            }}
+          >
+            X
+          </button>
+          <video
+            ref={playerRef}
+            src={bannerVideoUrl}
+            poster={bannerPosterUrl || undefined}
+            controls
+            playsInline
+            autoPlay
+            onClick={(event) => event.stopPropagation()}
+            style={{
+              width: "min(100%, 1180px)",
+              maxHeight: "82vh",
+              aspectRatio: "16 / 9",
+              background: "#050505",
+              objectFit: "contain",
+              boxShadow: "0 24px 80px rgba(0,0,0,0.55)",
+            }}
+          />
+        </div>
+      )}
     </section>
   );
 }
