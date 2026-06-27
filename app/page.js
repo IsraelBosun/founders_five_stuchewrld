@@ -24,7 +24,7 @@ export default async function Home() {
   return (
     <>
       <Nav />
-      <main style={{ maxWidth: "1440px", marginLeft: "auto", marginRight: "auto", paddingLeft: "clamp(1.25rem, 3vw, 3rem)", paddingRight: "clamp(1.25rem, 3vw, 3rem)" }}>
+      <main>
         <Hero bannerVideoUrl={bannerVideoUrl} bannerPosterUrl={bannerPosterUrl} />
         <Manifesto />
         <SelectedWork projects={projects ?? []} />

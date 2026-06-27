@@ -81,7 +81,7 @@ export default function TrustedBy() {
         overflow: "hidden",
       }}
     >
-      <div style={{ marginBottom: "2.5rem", paddingLeft: "clamp(1.25rem, 3vw, 3rem)" }}>
+      <div className="section-pad" style={{ marginBottom: "2.5rem" }}>
         <span
           style={{
             fontFamily: "var(--font-mono)",
@@ -96,7 +96,16 @@ export default function TrustedBy() {
       </div>
 
       <div
-        style={{ overflow: "hidden", cursor: dragging ? "grabbing" : "grab", userSelect: "none" }}
+        style={{
+          overflow: "hidden",
+          cursor: dragging ? "grabbing" : "grab",
+          userSelect: "none",
+          maxWidth: "1440px",
+          marginLeft: "auto",
+          marginRight: "auto",
+          paddingLeft: "var(--page-px)",
+          paddingRight: "var(--page-px)",
+        }}
         onMouseDown={(e) => startDrag(e.clientX)}
         onMouseMove={(e) => moveDrag(e.clientX)}
         onMouseUp={endDrag}
