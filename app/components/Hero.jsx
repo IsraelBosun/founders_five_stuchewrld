@@ -1,4 +1,4 @@
-export default function Hero() {
+export default function Hero({ bannerVideoUrl, bannerPosterUrl }) {
   return (
     <section
       style={{
@@ -7,8 +7,38 @@ export default function Hero() {
         display: "flex",
         flexDirection: "column",
         justifyContent: "flex-end",
+        position: "relative",
+        overflow: "hidden",
       }}
     >
+      {bannerVideoUrl && (
+        <video
+          autoPlay
+          muted
+          loop
+          playsInline
+          poster={bannerPosterUrl || undefined}
+          aria-hidden="true"
+          style={{
+            position: "absolute",
+            inset: 0,
+            width: "100%",
+            height: "100%",
+            objectFit: "cover",
+            opacity: 0.45,
+          }}
+        >
+          <source src={bannerVideoUrl} type="video/mp4" />
+        </video>
+      )}
+      <div
+        aria-hidden="true"
+        style={{
+          position: "absolute",
+          inset: 0,
+          background: "linear-gradient(180deg, rgba(10,10,10,0.35) 0%, rgba(10,10,10,0.72) 66%, #0A0A0A 100%)",
+        }}
+      />
       {/* Constrained content */}
       <div
         className="container"
@@ -18,6 +48,8 @@ export default function Hero() {
           display: "flex",
           flexDirection: "column",
           gap: "3rem",
+          position: "relative",
+          zIndex: 1,
         }}
       >
         {/* Top label */}
@@ -115,6 +147,26 @@ export default function Hero() {
             overflow: "hidden",
           }}
         >
+          {bannerVideoUrl && (
+            <video
+              autoPlay
+              muted
+              loop
+              playsInline
+              poster={bannerPosterUrl || undefined}
+              aria-hidden="true"
+              style={{
+                position: "absolute",
+                inset: 0,
+                width: "100%",
+                height: "100%",
+                objectFit: "cover",
+                opacity: 0.72,
+              }}
+            >
+              <source src={bannerVideoUrl} type="video/mp4" />
+            </video>
+          )}
           <div
             style={{
               position: "absolute",

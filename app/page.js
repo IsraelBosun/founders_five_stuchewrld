@@ -11,6 +11,10 @@ import BookSlot from "./components/BookSlot";
 import Footer from "./components/Footer";
 
 export default async function Home() {
+  const videoCdn = process.env.NEXT_PUBLIC_VIDEO_CDN;
+  const bannerVideoUrl = videoCdn ? `${videoCdn}/banner-hero.mp4` : "";
+  const bannerPosterUrl = videoCdn ? `${videoCdn}/banner-hero-poster.jpg` : "";
+
   const { data: projects } = await supabase
     .from("projects")
     .select("slug, title, client, category, label, year, gradient, video_url, preview_url")
@@ -21,7 +25,7 @@ export default async function Home() {
     <>
       <Nav />
       <main style={{ maxWidth: "1440px", marginLeft: "auto", marginRight: "auto", paddingLeft: "clamp(1.25rem, 3vw, 3rem)", paddingRight: "clamp(1.25rem, 3vw, 3rem)" }}>
-        <Hero />
+        <Hero bannerVideoUrl={bannerVideoUrl} bannerPosterUrl={bannerPosterUrl} />
         <Manifesto />
         <SelectedWork projects={projects ?? []} />
         <TrustedBy />
