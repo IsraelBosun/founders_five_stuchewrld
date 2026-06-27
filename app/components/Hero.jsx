@@ -44,7 +44,7 @@ export default function Hero({ bannerVideoUrl, bannerPosterUrl }) {
         className="container"
         style={{
           paddingTop: "120px",
-          paddingBottom: "4rem",
+          paddingBottom: "3rem",
           display: "flex",
           flexDirection: "column",
           gap: "3rem",
@@ -137,65 +137,6 @@ export default function Hero({ bannerVideoUrl, bannerPosterUrl }) {
           </span>
         </div>
 
-        {/* Showreel blank card */}
-        <div
-          style={{
-            width: "100%",
-            aspectRatio: "16/9",
-            background: "linear-gradient(135deg, #0d1520 0%, #0a0e14 50%, #080808 100%)",
-            position: "relative",
-            overflow: "hidden",
-          }}
-        >
-          {bannerVideoUrl && (
-            <video
-              autoPlay
-              muted
-              loop
-              playsInline
-              poster={bannerPosterUrl || undefined}
-              aria-hidden="true"
-              style={{
-                position: "absolute",
-                inset: 0,
-                width: "100%",
-                height: "100%",
-                objectFit: "cover",
-                opacity: 0.72,
-              }}
-            >
-              <source src={bannerVideoUrl} type="video/mp4" />
-            </video>
-          )}
-          <div
-            style={{
-              position: "absolute",
-              inset: 0,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-            }}
-          >
-            <button
-              aria-label="Play"
-              style={{
-                width: "56px",
-                height: "56px",
-                borderRadius: "50%",
-                border: "1px solid rgba(245,230,211,0.2)",
-                background: "none",
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
-              <svg width="14" height="16" viewBox="0 0 10 12" fill="#F5E6D3" style={{ marginLeft: "2px", opacity: 0.6 }}>
-                <path d="M0 0 L10 6 L0 12 Z" />
-              </svg>
-            </button>
-          </div>
-        </div>
       </div>
     </section>
   );
