@@ -1,3 +1,5 @@
+import ScrollReveal from "./ScrollReveal";
+
 export default function Founder() {
   return (
     <section
@@ -9,20 +11,22 @@ export default function Founder() {
         paddingBottom: "7rem",
       }}
     >
-      {/* Label */}
-      <span
-        style={{
-          fontFamily: "var(--font-mono)",
-          letterSpacing: "0.2em",
-          fontSize: "10px",
-          color: "#666666",
-          textTransform: "uppercase",
-          display: "block",
-          marginBottom: "3rem",
-        }}
-      >
-        04 / THE FOUNDER
-      </span>
+      <ScrollReveal delay={40}>
+        {/* Label */}
+        <span
+          style={{
+            fontFamily: "var(--font-mono)",
+            letterSpacing: "0.2em",
+            fontSize: "10px",
+            color: "#666666",
+            textTransform: "uppercase",
+            display: "block",
+            marginBottom: "3rem",
+          }}
+        >
+          04 / THE FOUNDER
+        </span>
+      </ScrollReveal>
 
       <div
         style={{
@@ -33,7 +37,8 @@ export default function Founder() {
         className="founder-grid"
       >
         {/* Portrait — blank card */}
-        <div
+        <ScrollReveal
+          delay={120}
           style={{
             width: "100%",
             maxWidth: "480px",
@@ -57,10 +62,10 @@ export default function Founder() {
           >
             FOUNDER SHOT
           </span>
-        </div>
+        </ScrollReveal>
 
         {/* Quote + bio */}
-        <div style={{ display: "flex", flexDirection: "column", gap: "2rem" }}>
+        <ScrollReveal delay={220} style={{ display: "flex", flexDirection: "column", gap: "2rem" }}>
           <blockquote style={{ margin: 0 }}>
             <p
               style={{
@@ -125,7 +130,7 @@ export default function Founder() {
               WATCH THE FOUNDER FILM →
             </button>
           </div>
-        </div>
+        </ScrollReveal>
       </div>
 
       <style>{`

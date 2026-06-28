@@ -1,167 +1,47 @@
 "use client";
-import { useState, useRef } from "react";
+
 import Link from "next/link";
+import { useMemo, useState } from "react";
+import ScrollReveal from "./ScrollReveal";
+import WorkPreviewCard from "./WorkPreviewCard";
 
 const filters = ["ALL", "MUSIC", "BRAND", "CORPORATE", "EVENTS"];
 
-function PlayCircle() {
+function ViewMoreCard({ active }) {
+  const href = active === "ALL" ? "/work" : `/work?category=${encodeURIComponent(active)}`;
   return (
-    <div
-      style={{
-        width: "36px",
-        height: "36px",
-        borderRadius: "50%",
-        border: "1px solid rgba(245,230,211,0.25)",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        cursor: "pointer",
-        transition: "border-color 0.2s",
-      }}
-    >
-      <svg width="9" height="11" viewBox="0 0 9 11" fill="#F5E6D3" style={{ marginLeft: "2px", opacity: 0.7 }}>
-        <path d="M0 0 L9 5.5 L0 11 Z" />
-      </svg>
-    </div>
-  );
-}
-
-function VideoCard({ project }) {
-  const [isPreviewing, setIsPreviewing] = useState(false);
-  const videoRef = useRef(null);
-  const src = project.preview_url || project.video_url;
-  const poster = project.thumbnail_url;
-
-  function handleMouseEnter() {
-    setIsPreviewing(true);
-    if (videoRef.current) {
-      videoRef.current.currentTime = 0;
-      videoRef.current.play().catch(() => {});
-    }
-  }
-
-  function handleMouseLeave() {
-    setIsPreviewing(false);
-    if (videoRef.current) {
-      videoRef.current.pause();
-      videoRef.current.currentTime = 0;
-    }
-  }
-
-  return (
-    <div
-      style={{
-        width: "100%",
-        aspectRatio: "3/4",
-        background: project.gradient,
-        position: "relative",
-        overflow: "hidden",
-        marginBottom: "1rem",
-      }}
-      onMouseEnter={handleMouseEnter}
-      onMouseLeave={handleMouseLeave}
-    >
-      {poster && (
-        <img
-          src={poster}
-          alt=""
-          aria-hidden="true"
-          style={{
-            position: "absolute",
-            inset: 0,
-            width: "100%",
-            height: "100%",
-            objectFit: "cover",
-            display: "block",
-          }}
-        />
-      )}
-      {src && (
-        <video
-          ref={videoRef}
-          src={src}
-          poster={poster || undefined}
-          muted
-          playsInline
-          loop
-          preload="none"
-          style={{
-            position: "absolute",
-            inset: 0,
-            width: "100%",
-            height: "100%",
-            objectFit: "cover",
-            opacity: isPreviewing || !poster ? 1 : 0,
-            transition: "opacity 0.2s ease",
-          }}
-        />
-      )}
-      <div style={{ position: "absolute", top: "12px", right: "12px" }}>
-        <PlayCircle />
-      </div>
-    </div>
+    <Link href={href} className="work-view-more-card">
+      <span className="work-view-more-kicker">Archive</span>
+      <strong>View more work</strong>
+      <span className="work-view-more-line" />
+      <small>All films, campaigns, events and brand stories.</small>
+    </Link>
   );
 }
 
 export default function SelectedWork({ projects = [] }) {
   const [active, setActive] = useState("ALL");
-  const reelProjects = projects.filter((p) => p.category !== "BTS");
 
-  const visible =
-    active === "ALL" ? reelProjects : reelProjects.filter((p) => p.category === active);
+  const reelProjects = useMemo(() => projects.filter((p) => p.category !== "BTS"), [projects]);
+  const filtered = useMemo(
+    () => (active === "ALL" ? reelProjects : reelProjects.filter((p) => p.category === active)),
+    [active, reelProjects]
+  );
+  const homepageProjects = filtered.slice(0, 4);
+  const showViewMore = filtered.length > 4 || active === "ALL";
 
   return (
-    <section id="work" style={{ background: "#0A0A0A", paddingTop: "6rem" }}>
-      {/* Header row */}
-      <div
-        className="section-pad"
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          gap: "1.5rem",
-          marginBottom: "2rem",
-        }}
-      >
-        <div
-          style={{
-            display: "flex",
-            alignItems: "flex-start",
-            justifyContent: "space-between",
-            flexWrap: "wrap",
-            gap: "1rem",
-          }}
-        >
-          <span
-            style={{
-              fontFamily: "var(--font-mono)",
-              letterSpacing: "0.2em",
-              fontSize: "10px",
-              color: "#666666",
-              textTransform: "uppercase",
-              flexShrink: 0,
-            }}
-          >
-            02 / SELECTED WORK
-          </span>
-
-          {/* Filter chips */}
-          <div style={{ display: "flex", alignItems: "center", gap: "1.5rem", flexWrap: "wrap" }}>
+    <section id="work" className="selected-work-section">
+      <ScrollReveal className="section-pad selected-work-header" delay={40}>
+        <div className="selected-work-topline">
+          <span className="section-kicker">02 / SELECTED WORK</span>
+          <div className="work-filters" aria-label="Work filters">
             {filters.map((f) => (
               <button
                 key={f}
                 onClick={() => setActive(f)}
-                style={{
-                  fontFamily: "var(--font-mono)",
-                  letterSpacing: "0.15em",
-                  fontSize: "10px",
-                  textTransform: "uppercase",
-                  background: "none",
-                  border: "none",
-                  cursor: "pointer",
-                  color: active === f ? "#F5E6D3" : "#666666",
-                  transition: "color 0.2s",
-                  padding: 0,
-                }}
+                className={active === f ? "is-active" : ""}
+                type="button"
               >
                 {f}
               </button>
@@ -169,71 +49,24 @@ export default function SelectedWork({ projects = [] }) {
           </div>
         </div>
 
-        {/* Heading */}
-        <h2
-          style={{
-            fontFamily: "var(--font-display)",
-            lineHeight: 1.05,
-            color: "#F5E6D3",
-            fontSize: "clamp(36px, 5vw, 64px)",
-            fontWeight: 500,
-            fontStyle: "italic",
-          }}
-        >
-          The reel.
-        </h2>
-      </div>
+        <div className="selected-work-title-row">
+          <h2>The reel.</h2>
+          <p>Four sharp cuts from the archive. Swipe or scroll the row, then open the full body of work.</p>
+        </div>
+      </ScrollReveal>
 
-      {/* Horizontal scroll — padding-left matches section-pad so cards align */}
-      <div
-        className="no-scrollbar"
-        style={{
-          overflowX: "auto",
-          maxWidth: "1440px",
-          marginLeft: "auto",
-          marginRight: "auto",
-          paddingLeft: "var(--page-px)",
-          paddingRight: "var(--page-px)",
-          paddingBottom: "5rem",
-        }}
-      >
-        <div style={{ display: "flex", gap: "1.25rem", width: "max-content" }}>
-          {visible.map((project) => (
-            <Link
-              key={project.slug}
-              href={`/work/${project.slug}`}
-              style={{ textDecoration: "none", flexShrink: 0, width: "clamp(280px, 26vw, 400px)" }}
-            >
-              <article className="work-card" style={{ cursor: "pointer" }}>
-                <VideoCard project={project} />
-
-                {/* Card info */}
-                <p
-                  style={{
-                    fontFamily: "var(--font-mono)",
-                    letterSpacing: "0.15em",
-                    fontSize: "9px",
-                    color: "#666666",
-                    textTransform: "uppercase",
-                    marginBottom: "6px",
-                  }}
-                >
-                  {project.label}
-                </p>
-                <h3
-                  style={{
-                    fontFamily: "var(--font-display)",
-                    lineHeight: 1.1,
-                    color: "#F5E6D3",
-                    fontSize: "22px",
-                    fontWeight: 500,
-                  }}
-                >
-                  {project.title}
-                </h3>
-              </article>
-            </Link>
+      <div className="selected-work-viewport no-scrollbar">
+        <div className="selected-work-track">
+          {homepageProjects.map((project, index) => (
+            <ScrollReveal key={project.slug} className="selected-work-card" delay={120 + index * 80}>
+              <WorkPreviewCard project={project} index={index} />
+            </ScrollReveal>
           ))}
+          {showViewMore && (
+            <ScrollReveal className="selected-work-card" delay={120 + homepageProjects.length * 80}>
+              <ViewMoreCard active={active} />
+            </ScrollReveal>
+          )}
         </div>
       </div>
     </section>

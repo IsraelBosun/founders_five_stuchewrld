@@ -1,5 +1,6 @@
 import Image from "next/image";
 import { supabase } from "../../lib/supabase";
+import ScrollReveal from "./ScrollReveal";
 
 const polaroids = [
   { src: "/bts/photo_1.jpeg", label: "SET · A4:24", rotate: "-2deg" },
@@ -31,50 +32,52 @@ export default async function OffCamera() {
         paddingBottom: "7rem",
       }}
     >
-      {/* Label */}
-      <span
-        style={{
-          fontFamily: "var(--font-mono)",
-          letterSpacing: "0.2em",
-          fontSize: "10px",
-          color: "#666666",
-          textTransform: "uppercase",
-          display: "block",
-          marginBottom: "2.5rem",
-        }}
-      >
-        03 / OFF CAMERA
-      </span>
+      <ScrollReveal delay={40}>
+        {/* Label */}
+        <span
+          style={{
+            fontFamily: "var(--font-mono)",
+            letterSpacing: "0.2em",
+            fontSize: "10px",
+            color: "#666666",
+            textTransform: "uppercase",
+            display: "block",
+            marginBottom: "2.5rem",
+          }}
+        >
+          03 / OFF CAMERA
+        </span>
 
-      {/* Heading */}
-      <h2
-        style={{
-          fontFamily: "var(--font-display)",
-          lineHeight: 1.05,
-          color: "#F5E6D3",
-          fontSize: "clamp(36px, 5vw, 64px)",
-          fontWeight: 500,
-          fontStyle: "italic",
-          marginBottom: "1.25rem",
-        }}
-      >
-        The cutting room.
-      </h2>
+        {/* Heading */}
+        <h2
+          style={{
+            fontFamily: "var(--font-display)",
+            lineHeight: 1.05,
+            color: "#F5E6D3",
+            fontSize: "clamp(36px, 5vw, 64px)",
+            fontWeight: 500,
+            fontStyle: "italic",
+            marginBottom: "1.25rem",
+          }}
+        >
+          The cutting room.
+        </h2>
 
-      {/* Subtext */}
-      <p
-        style={{
-          fontFamily: "var(--font-body)",
-          lineHeight: 1.6,
-          color: "#888888",
-          fontSize: "15px",
-          maxWidth: "480px",
-          marginBottom: "4rem",
-        }}
-      >
-        Behind every cinematic frame is a mess of cables, coffee cups, and
-        creative chaos. This is where the magic actually happens.
-      </p>
+        {/* Subtext */}
+        <p
+          style={{
+            fontFamily: "var(--font-body)",
+            lineHeight: 1.6,
+            color: "#888888",
+            fontSize: "15px",
+            maxWidth: "480px",
+            marginBottom: "4rem",
+          }}
+        >
+          Behind every cinematic frame is a mess of cables, coffee cups, and
+          creative chaos. This is where the magic actually happens.
+        </p>
+      </ScrollReveal>
 
       {(btsVideos?.length > 0) && (
         <div
@@ -85,9 +88,12 @@ export default async function OffCamera() {
             marginBottom: "4rem",
           }}
         >
-          {btsVideos.map((video) => (
-            <article
+          {btsVideos.map((video, index) => (
+            <ScrollReveal
               key={video.slug}
+              delay={120 + index * 80}
+            >
+              <article
               style={{
                 background: "#0A0A0A",
                 border: "1px solid rgba(255,255,255,0.06)",
@@ -133,7 +139,8 @@ export default async function OffCamera() {
                   {video.title}
                 </h3>
               </div>
-            </article>
+              </article>
+            </ScrollReveal>
           ))}
         </div>
       )}
@@ -147,8 +154,11 @@ export default async function OffCamera() {
         }}
       >
         {polaroids.map((p, i) => (
-          <div
+          <ScrollReveal
             key={i}
+            delay={(i % 4) * 70}
+          >
+            <div
             className="polaroid"
             style={{
               background: "white",
@@ -188,7 +198,8 @@ export default async function OffCamera() {
             >
               {p.label}
             </p>
-          </div>
+            </div>
+          </ScrollReveal>
         ))}
       </div>
     </section>

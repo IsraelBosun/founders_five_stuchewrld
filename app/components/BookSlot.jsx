@@ -1,3 +1,5 @@
+import ScrollReveal from "./ScrollReveal";
+
 export default function BookSlot() {
   const whatsappUrl =
     "https://wa.me/2349034320189?text=Hi%2C%20I%27d%20like%20to%20book%20a%20slot%20with%20STUCHEWRLD%20Inc.";
@@ -13,7 +15,7 @@ export default function BookSlot() {
         textAlign: "center",
       }}
     >
-      <div style={{ maxWidth: "640px", margin: "0 auto" }}>
+      <ScrollReveal delay={80} style={{ maxWidth: "640px", margin: "0 auto" }}>
         <h2
           style={{
             fontFamily: "var(--font-display)",
@@ -76,7 +78,7 @@ export default function BookSlot() {
             WHATSAPP US
           </a>
         </div>
-      </div>
+      </ScrollReveal>
     </section>
   );
 }

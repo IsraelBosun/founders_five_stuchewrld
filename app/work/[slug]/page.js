@@ -54,6 +54,7 @@ export default async function WorkPage({ params }) {
   const { slug } = await params;
   const [project, next] = await Promise.all([fetchProject(slug), fetchNextProject(slug)]);
   if (!project) notFound();
+  const heroPoster = project.thumbnail_url;
 
   return (
     <div style={{ background: "#0A0A0A", minHeight: "100vh" }}>
@@ -105,8 +106,34 @@ export default async function WorkPage({ params }) {
 
       {/* Hero — full bleed */}
       <div style={{ width: "100%", height: "100vh", position: "relative", overflow: "hidden" }}>
-        <div style={{ position: "absolute", inset: 0 }}>
-          <VideoModal videoUrl={project.video_url} gradient={project.hero_gradient} label={project.title} fill />
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            background: project.hero_gradient,
+          }}
+        >
+          {heroPoster && (
+            <img
+              src={heroPoster}
+              alt=""
+              style={{
+                position: "absolute",
+                inset: 0,
+                width: "100%",
+                height: "100%",
+                objectFit: "cover",
+              }}
+            />
+          )}
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              background:
+                "linear-gradient(90deg, rgba(10,10,10,0.72) 0%, rgba(10,10,10,0.28) 52%, rgba(10,10,10,0.62) 100%)",
+            }}
+          />
         </div>
 
         {/* Title overlay — bottom left */}
@@ -208,7 +235,7 @@ export default async function WorkPage({ params }) {
           <span style={{ ...mono, color: "#666666", display: "block", marginBottom: "2rem" }}>
             THE FILM
           </span>
-          <VideoModal videoUrl={project.video_url} gradient={project.hero_gradient} label="film" />
+          <VideoModal videoUrl={project.video_url} gradient={project.hero_gradient} label="film" poster={heroPoster} />
         </div>
 
         {/* Stills grid */}

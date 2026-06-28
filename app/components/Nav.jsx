@@ -2,10 +2,10 @@
 import { useState, useEffect } from "react";
 
 const links = [
-  { label: "WORK", href: "#work" },
-  { label: "OFF CAMERA", href: "#off-camera" },
-  { label: "FOUNDER", href: "#founder" },
-  { label: "CONTACT", href: "#contact" },
+  { label: "WORK", href: "/work" },
+  { label: "OFF CAMERA", href: "/#off-camera" },
+  { label: "FOUNDER", href: "/#founder" },
+  { label: "CONTACT", href: "/#contact" },
 ];
 
 const monoBase = {
@@ -105,7 +105,7 @@ export default function Nav() {
                 </a>
               ))}
               <a
-                href="#book"
+                href="/#book"
                 className="btn-outline"
                 style={{ ...monoBase, padding: "8px 16px", color: "#F5E6D3" }}
               >
@@ -212,7 +212,7 @@ export default function Nav() {
             ))}
 
             <a
-              href="#book"
+              href="/#book"
               onClick={closeMenu}
               style={{
                 marginTop: "2rem",

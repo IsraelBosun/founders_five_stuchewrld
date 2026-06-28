@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 
-export default function VideoModal({ videoUrl, gradient, label, fill }) {
+export default function VideoModal({ videoUrl, gradient, label, fill, poster }) {
   const [open, setOpen] = useState(false);
   const [videoError, setVideoError] = useState(false);
   const videoRef = useRef(null);
@@ -50,13 +50,21 @@ export default function VideoModal({ videoUrl, gradient, label, fill }) {
           cursor: 'pointer',
         }}
       >
-        <video
-          src={videoUrl}
-          muted
-          playsInline
-          preload="metadata"
-          style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: 0.5 }}
-        />
+        {poster ? (
+          <img
+            src={poster}
+            alt=""
+            style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: 0.68 }}
+          />
+        ) : (
+          <video
+            src={videoUrl}
+            muted
+            playsInline
+            preload="metadata"
+            style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: 0.5 }}
+          />
+        )}
         <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <button
             aria-label={`Play ${label}`}
@@ -125,6 +133,7 @@ export default function VideoModal({ videoUrl, gradient, label, fill }) {
               controls
               autoPlay
               playsInline
+              poster={poster || undefined}
               onClick={e => e.stopPropagation()}
               onError={() => setVideoError(true)}
               style={{ maxWidth: '90vw', maxHeight: '90vh', outline: 'none' }}

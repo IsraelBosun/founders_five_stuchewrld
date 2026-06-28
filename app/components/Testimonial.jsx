@@ -1,3 +1,5 @@
+import ScrollReveal from "./ScrollReveal";
+
 export default function Testimonial() {
   return (
     <section
@@ -9,7 +11,7 @@ export default function Testimonial() {
         textAlign: "center",
       }}
     >
-      <div style={{ maxWidth: "760px", margin: "0 auto" }}>
+      <ScrollReveal delay={80} style={{ maxWidth: "760px", margin: "0 auto" }}>
         <blockquote style={{ margin: 0 }}>
           <p
             style={{
@@ -41,7 +43,7 @@ export default function Testimonial() {
             </cite>
           </footer>
         </blockquote>
-      </div>
+      </ScrollReveal>
     </section>
   );
 }

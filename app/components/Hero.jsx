@@ -29,6 +29,7 @@ export default function Hero({ bannerVideoUrl, bannerPosterUrl }) {
 
   return (
     <section
+      className="hero-section"
       style={{
         background: "#0A0A0A",
         minHeight: "100vh",
@@ -69,13 +70,10 @@ export default function Hero({ bannerVideoUrl, bannerPosterUrl }) {
       />
       {/* Constrained content */}
       <div
-        className="container"
+        className="container hero-content"
         style={{
-          paddingTop: "120px",
-          paddingBottom: "3rem",
           display: "flex",
           flexDirection: "column",
-          gap: "3rem",
           position: "relative",
           zIndex: 1,
         }}
@@ -95,12 +93,12 @@ export default function Hero({ bannerVideoUrl, bannerPosterUrl }) {
 
         {/* Headline */}
         <h1
+          className="hero-title"
           style={{
             fontFamily: "var(--font-display)",
             lineHeight: 1.05,
             color: "#F5E6D3",
             fontWeight: 500,
-            fontSize: "clamp(48px, 7vw, 96px)",
             maxWidth: "860px",
           }}
         >
