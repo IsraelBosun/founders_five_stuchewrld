@@ -28,6 +28,11 @@ export const metadata = {
     "Every brand has a story. We bring yours to life through cinematic storytelling that resonates long after the screen goes dark.",
 };
 
+export const viewport = {
+  width: "device-width",
+  initialScale: 1,
+};
+
 export default function RootLayout({ children }) {
   return (
     <html

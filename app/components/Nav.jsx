@@ -4,8 +4,8 @@ import { useState, useEffect } from "react";
 const links = [
   { label: "WORK", href: "/work" },
   { label: "OFF CAMERA", href: "/#off-camera" },
-  { label: "FOUNDER", href: "/#founder" },
-  { label: "CONTACT", href: "/#contact" },
+  { label: "FOUNDER", href: "/founder" },
+  { label: "CONTACT", href: "/contact" },
 ];
 
 const monoBase = {

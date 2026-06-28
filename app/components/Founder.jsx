@@ -1,5 +1,7 @@
 import ScrollReveal from "./ScrollReveal";
 
+const founderImage = "/bts/photo_4.jpeg";
+
 export default function Founder() {
   return (
     <section
@@ -12,7 +14,6 @@ export default function Founder() {
       }}
     >
       <ScrollReveal delay={40}>
-        {/* Label */}
         <span
           style={{
             fontFamily: "var(--font-mono)",
@@ -36,7 +37,6 @@ export default function Founder() {
         }}
         className="founder-grid"
       >
-        {/* Portrait — blank card */}
         <ScrollReveal
           delay={120}
           style={{
@@ -48,23 +48,43 @@ export default function Founder() {
             overflow: "hidden",
           }}
         >
+          <img
+            src={founderImage}
+            alt="Stephen Uche filming behind the scenes"
+            style={{
+              width: "100%",
+              height: "100%",
+              objectFit: "cover",
+              objectPosition: "58% center",
+              display: "block",
+              filter: "contrast(1.02) saturate(0.9)",
+            }}
+          />
+          <span
+            aria-hidden="true"
+            style={{
+              position: "absolute",
+              inset: 0,
+              background:
+                "linear-gradient(to top, rgba(0,0,0,0.42), transparent 46%), linear-gradient(120deg, rgba(10,10,10,0.1), rgba(10,10,10,0.4))",
+            }}
+          />
           <span
             style={{
               fontFamily: "var(--font-mono)",
               letterSpacing: "0.15em",
               fontSize: "10px",
-              color: "#444444",
+              color: "rgba(245,230,211,0.66)",
               position: "absolute",
               bottom: "16px",
               left: "16px",
               textTransform: "uppercase",
             }}
           >
-            FOUNDER SHOT
+            STEPHEN UCHE
           </span>
         </ScrollReveal>
 
-        {/* Quote + bio */}
         <ScrollReveal delay={220} style={{ display: "flex", flexDirection: "column", gap: "2rem" }}>
           <blockquote style={{ margin: 0 }}>
             <p
@@ -91,7 +111,7 @@ export default function Founder() {
               maxWidth: "380px",
             }}
           >
-            Stephen Uche · Creative Director, STUCHEWRLD Inc. A storyteller
+            Stephen Uche, Creative Director of STUCHEWRLD Inc. A storyteller
             behind the lens for over a decade, building visual worlds for
             brands and artists across the continent.
           </p>
@@ -108,9 +128,10 @@ export default function Founder() {
                 marginBottom: "10px",
               }}
             >
-              FOUNDER FILM
+              FOUNDER PROFILE
             </span>
-            <button
+            <a
+              href="/founder"
               style={{
                 fontFamily: "var(--font-mono)",
                 letterSpacing: "0.15em",
@@ -125,10 +146,11 @@ export default function Founder() {
                 alignItems: "center",
                 gap: "8px",
                 transition: "gap 0.2s",
+                textDecoration: "none",
               }}
             >
-              WATCH THE FOUNDER FILM →
-            </button>
+              VIEW MORE &rarr;
+            </a>
           </div>
         </ScrollReveal>
       </div>
