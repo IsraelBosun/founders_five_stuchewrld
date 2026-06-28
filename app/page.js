@@ -17,7 +17,7 @@ export default async function Home() {
 
   const { data: projects } = await supabase
     .from("projects")
-    .select("slug, title, client, category, label, year, gradient, video_url, preview_url")
+    .select("slug, title, client, category, label, year, gradient, video_url, preview_url, thumbnail_url")
     .eq("published", true)
     .order("sort_order", { ascending: true });
 

@@ -27,10 +27,13 @@ function PlayCircle() {
 }
 
 function VideoCard({ project }) {
+  const [isPreviewing, setIsPreviewing] = useState(false);
   const videoRef = useRef(null);
   const src = project.preview_url || project.video_url;
+  const poster = project.thumbnail_url;
 
   function handleMouseEnter() {
+    setIsPreviewing(true);
     if (videoRef.current) {
       videoRef.current.currentTime = 0;
       videoRef.current.play().catch(() => {});
@@ -38,6 +41,7 @@ function VideoCard({ project }) {
   }
 
   function handleMouseLeave() {
+    setIsPreviewing(false);
     if (videoRef.current) {
       videoRef.current.pause();
       videoRef.current.currentTime = 0;
@@ -57,10 +61,26 @@ function VideoCard({ project }) {
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
     >
+      {poster && (
+        <img
+          src={poster}
+          alt=""
+          aria-hidden="true"
+          style={{
+            position: "absolute",
+            inset: 0,
+            width: "100%",
+            height: "100%",
+            objectFit: "cover",
+            display: "block",
+          }}
+        />
+      )}
       {src && (
         <video
           ref={videoRef}
           src={src}
+          poster={poster || undefined}
           muted
           playsInline
           loop
@@ -71,6 +91,8 @@ function VideoCard({ project }) {
             width: "100%",
             height: "100%",
             objectFit: "cover",
+            opacity: isPreviewing || !poster ? 1 : 0,
+            transition: "opacity 0.2s ease",
           }}
         />
       )}

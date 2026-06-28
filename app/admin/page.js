@@ -17,6 +17,10 @@ function slugify(str) {
   return str.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
 }
 
+function r2KeyFromUrl(url) {
+  return (url || '').split('?')[0].split('#')[0].split('/').pop();
+}
+
 const EMPTY = {
   slug: '', title: '', client: '', category: 'BRAND', label: '',
   year: new Date().getFullYear().toString(),
@@ -229,23 +233,185 @@ function captureVideoFrame(file) {
   });
 }
 
-function VideoUpload({ label, field, slug, projectId, value, thumbnail, videoKey: customVideoKey, thumbKey: customThumbKey, deleteKeys, onChange, onThumbnailChange, onAutoSave }) {
+function captureVideoFrameFromUrl(videoUrl, seconds) {
+  return new Promise((resolve, reject) => {
+    const video = document.createElement('video');
+    const separator = videoUrl.includes('?') ? '&' : '?';
+    const frameUrl = `${videoUrl}${separator}frameCapture=${Date.now()}-${seconds}`;
+    video.crossOrigin = 'anonymous';
+    video.muted = true;
+    video.preload = 'auto';
+
+    const cleanup = () => {
+      video.removeAttribute('src');
+      video.load();
+    };
+
+    video.addEventListener('seeked', () => {
+      try {
+        const canvas = document.createElement('canvas');
+        canvas.width = video.videoWidth || 1280;
+        canvas.height = video.videoHeight || 720;
+        canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
+        canvas.toBlob(blob => {
+          cleanup();
+          if (blob) resolve(blob);
+          else reject(new Error('Could not capture that frame.'));
+        }, 'image/jpeg', 0.85);
+      } catch (err) {
+        cleanup();
+        reject(new Error('Browser blocked frame capture. Check R2 CORS for GET access.'));
+      }
+    }, { once: true });
+
+    video.addEventListener('loadedmetadata', () => {
+      video.currentTime = Math.min(seconds, Math.max(video.duration - 0.1, 0));
+    }, { once: true });
+
+    video.addEventListener('error', () => {
+      cleanup();
+      reject(new Error('Could not load this video for frame capture.'));
+    }, { once: true });
+
+    video.src = frameUrl;
+    video.load();
+  });
+}
+
+function imageFileToJpegBlob(file) {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = img.naturalWidth || 1280;
+      canvas.height = img.naturalHeight || 720;
+      canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+      canvas.toBlob(blob => {
+        URL.revokeObjectURL(url);
+        if (blob) resolve(blob);
+        else reject(new Error('Could not prepare this image.'));
+      }, 'image/jpeg', 0.88);
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error('Could not read this image.'));
+    };
+    img.src = url;
+  });
+}
+
+function VideoUpload({ label, field, slug, projectId, value, thumbnail, videoKey: customVideoKey, thumbKey: customThumbKey, deleteKeys, onChange, onThumbnailChange, onAutoSave, onPosterSaved, onDeleted }) {
   const [progress, setProgress] = useState(null);
   const [convertProgress, setConvertProgress] = useState(0);
   const [status, setStatus] = useState('');
+  const [posterStatus, setPosterStatus] = useState('');
+  const [frameOptions, setFrameOptions] = useState([]);
+  const [selectedPoster, setSelectedPoster] = useState('');
+  const [posterPreviewVersion, setPosterPreviewVersion] = useState(Date.now());
+  const [posterPreviewError, setPosterPreviewError] = useState(false);
   const [dragOver, setDragOver] = useState(false);
   const [filename, setFilename] = useState('');
   const [localThumb, setLocalThumb] = useState(thumbnail || '');
   const [deleting, setDeleting] = useState(false);
   const inputRef = useRef(null);
+  const posterInputRef = useRef(null);
 
-  useEffect(() => { setLocalThumb(thumbnail || ''); }, [thumbnail]);
+  useEffect(() => {
+    setLocalThumb(thumbnail || '');
+    setPosterPreviewError(false);
+    setPosterPreviewVersion(Date.now());
+  }, [thumbnail]);
+  useEffect(() => () => frameOptions.forEach(option => URL.revokeObjectURL(option.previewUrl)), [frameOptions]);
+
+  function getThumbKey() {
+    return customThumbKey || `${slug || 'project'}-poster.jpg`;
+  }
+
+  function displayUrl(url) {
+    if (!url) return '';
+    const separator = url.includes('?') ? '&' : '?';
+    return `${url}${separator}adminPreview=${posterPreviewVersion}`;
+  }
+
+  async function savePosterBlob(blob, selected = '') {
+    setPosterStatus('saving');
+    const thumbKey = getThumbKey();
+    try {
+      const presign = await fetch('/api/r2-presign', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ filename: thumbKey, contentType: 'image/jpeg' }),
+      }).then(r => r.json());
+
+      if (!presign.url) throw new Error(presign.error || 'Could not get poster upload URL.');
+
+      await fetch(presign.url, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'image/jpeg' },
+        body: blob,
+      });
+
+      const versionedPublicUrl = `${presign.publicUrl}?v=${Date.now()}`;
+      setLocalThumb(versionedPublicUrl);
+      setSelectedPoster(selected);
+      setPosterPreviewError(false);
+      setPosterPreviewVersion(Date.now());
+      onThumbnailChange?.(versionedPublicUrl);
+
+      if (projectId) {
+        const { error } = await supabase.from('projects').update({ thumbnail_url: versionedPublicUrl }).eq('id', projectId);
+        if (error) throw new Error(error.message);
+      }
+
+      onPosterSaved?.(versionedPublicUrl);
+      setPosterStatus('done');
+    } catch (err) {
+      setPosterStatus('');
+      alert('Could not save poster image:\n' + err.message);
+    }
+  }
+
+  async function handlePosterFile(file) {
+    if (!file) return;
+    setPosterStatus('preparing');
+    try {
+      const blob = await imageFileToJpegBlob(file);
+      await savePosterBlob(blob, 'custom');
+    } catch (err) {
+      setPosterStatus('');
+      alert('Could not use that image:\n' + err.message);
+    } finally {
+      if (posterInputRef.current) posterInputRef.current.value = '';
+    }
+  }
+
+  async function generateFrameOptions() {
+    if (!value) return;
+    setPosterStatus('generating');
+    frameOptions.forEach(option => URL.revokeObjectURL(option.previewUrl));
+    setFrameOptions([]);
+
+    try {
+      const times = [1, 2, 4, 6, 8];
+      const frames = [];
+      for (const seconds of times) {
+        const blob = await captureVideoFrameFromUrl(value, seconds);
+        frames.push({ seconds, blob, previewUrl: URL.createObjectURL(blob) });
+      }
+      setFrameOptions(frames);
+      setPosterStatus('');
+    } catch (err) {
+      setPosterStatus('');
+      alert('Could not generate frame options:\n' + err.message);
+    }
+  }
 
   async function handleDelete() {
     if (!confirm('Delete this video? It will be permanently removed from Cloudflare R2 and cannot be undone.')) return;
     setDeleting(true);
 
-    const keys = deleteKeys || [value, thumbnail].filter(Boolean).map(url => url.split('/').pop());
+    const keys = deleteKeys || [value, thumbnail].filter(Boolean).map(r2KeyFromUrl);
     try {
       if (keys.length > 0) {
         const res = await fetch('/api/r2-delete', {
@@ -272,6 +438,7 @@ function VideoUpload({ label, field, slug, projectId, value, thumbnail, videoKey
     setFilename('');
     setLocalThumb('');
     setDeleting(false);
+    onDeleted?.();
   }
 
   async function processFile(file) {
@@ -353,8 +520,10 @@ function VideoUpload({ label, field, slug, projectId, value, thumbnail, videoKey
     let thumbPublicUrl = '';
     if (thumbBlob && thumbPresign) {
       await fetch(thumbPresign.url, { method: 'PUT', headers: { 'Content-Type': 'image/jpeg' }, body: thumbBlob });
-      thumbPublicUrl = thumbPresign.publicUrl;
+      thumbPublicUrl = `${thumbPresign.publicUrl}?v=${Date.now()}`;
       setLocalThumb(thumbPublicUrl);
+      setPosterPreviewError(false);
+      setPosterPreviewVersion(Date.now());
       onThumbnailChange?.(thumbPublicUrl);
     }
 
@@ -366,6 +535,7 @@ function VideoUpload({ label, field, slug, projectId, value, thumbnail, videoKey
 
   const hasVideo = status === 'done' || !!value;
   const displayThumb = localThumb;
+  const displayThumbSrc = displayUrl(displayThumb);
 
   return (
     <div>
@@ -373,21 +543,31 @@ function VideoUpload({ label, field, slug, projectId, value, thumbnail, videoKey
 
       {hasVideo && (
         <div className="rounded-lg overflow-hidden mb-3 border border-white/10" style={{ background: '#050505' }}>
-          {displayThumb ? (
-            <div style={{ position: 'relative' }}>
-              <img
-                src={displayThumb}
-                alt="Thumbnail"
-                className="w-full"
-                style={{ maxHeight: '220px', objectFit: 'cover', display: 'block' }}
-              />
-              <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.3)' }}>
-                <div style={{ width: '44px', height: '44px', borderRadius: '50%', border: '1px solid rgba(245,230,211,0.3)', background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <svg width="10" height="13" viewBox="0 0 10 12" fill="#F5E6D3" style={{ marginLeft: '2px', opacity: 0.85 }}>
-                    <path d="M0 0 L10 6 L0 12 Z" />
-                  </svg>
+          {displayThumb && !posterPreviewError ? (
+            <div className="grid md:grid-cols-[220px_1fr]">
+              <div style={{ position: 'relative', minHeight: '124px', background: '#030303' }}>
+                <img
+                  src={displayThumbSrc}
+                  alt="Current poster"
+                  crossOrigin="anonymous"
+                  className="w-full h-full"
+                  onError={() => setPosterPreviewError(true)}
+                  style={{ aspectRatio: '16 / 9', objectFit: 'cover', display: 'block' }}
+                />
+                <div style={{ position: 'absolute', left: 10, bottom: 10, padding: '4px 7px', borderRadius: 999, background: 'rgba(0,0,0,0.65)', border: '1px solid rgba(245,230,211,0.18)' }}>
+                  <span className="font-mono text-[9px] uppercase tracking-widest text-[#f5e6d3]">Current poster</span>
                 </div>
               </div>
+              <div className="p-4 flex flex-col justify-center gap-2">
+                <p className="font-mono text-xs text-[#666] uppercase tracking-widest">Video ready</p>
+                <p className="text-[#888] text-sm truncate">{filename || r2KeyFromUrl(value)}</p>
+                <p className="text-[#666] text-xs">This poster is what the homepage shows before the video preview plays.</p>
+              </div>
+            </div>
+          ) : displayThumb && posterPreviewError ? (
+            <div className="p-4">
+              <p className="text-amber-300 text-xs">Poster saved, but this preview could not load. Try refreshing admin; the public URL may still be updating.</p>
+              <p className="text-[#666] text-xs break-all mt-2">{displayThumb}</p>
             </div>
           ) : value ? (
             <video src={value} controls playsInline preload="metadata" className="w-full" style={{ maxHeight: '220px', display: 'block' }} />
@@ -405,6 +585,101 @@ function VideoUpload({ label, field, slug, projectId, value, thumbnail, videoKey
               {deleting ? 'Deleting…' : 'Delete video'}
             </button>
           </div>
+        </div>
+      )}
+
+      {hasVideo && (
+        <div className="mb-3 rounded-lg border border-white/6 p-4 space-y-4" style={{ background: 'rgba(255,255,255,0.025)' }}>
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <div>
+              <p className="font-mono text-xs text-[#666] uppercase tracking-widest">Poster image</p>
+              <p className="text-[#888] text-sm mt-1">Upload a custom image or pick one generated from the video.</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => posterInputRef.current?.click()}
+                disabled={posterStatus === 'saving' || posterStatus === 'generating' || posterStatus === 'preparing'}
+                className="font-mono text-[10px] uppercase tracking-widest px-3 py-2 rounded border border-white/10 text-[#888] hover:text-[#f5e6d3] hover:border-white/20 disabled:opacity-40"
+              >
+                Upload image
+              </button>
+              <button
+                type="button"
+                onClick={generateFrameOptions}
+                disabled={!value || posterStatus === 'saving' || posterStatus === 'generating' || posterStatus === 'preparing'}
+                className="font-mono text-[10px] uppercase tracking-widest px-3 py-2 rounded border border-white/10 text-[#888] hover:text-[#f5e6d3] hover:border-white/20 disabled:opacity-40"
+              >
+                {posterStatus === 'generating' ? 'Generating...' : 'Generate frames'}
+              </button>
+            </div>
+            <input
+              ref={posterInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              onChange={e => handlePosterFile(e.target.files?.[0])}
+              className="hidden"
+            />
+          </div>
+
+          {posterStatus && posterStatus !== 'generating' && (
+            <p className={posterStatus === 'done' ? 'text-green-400 text-xs' : 'text-[#666] text-xs'}>
+              {posterStatus === 'preparing' ? 'Preparing poster image...' : posterStatus === 'saving' ? 'Saving poster image...' : 'Poster image saved.'}
+            </p>
+          )}
+
+          {frameOptions.length > 0 && (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <p className="font-mono text-[10px] uppercase tracking-widest text-[#666]">Frame options</p>
+                <p className="text-[#555] text-xs">Click a frame to save it</p>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2">
+                {frameOptions.map(option => {
+                  const selected = selectedPoster === `${option.seconds}s`;
+                  return (
+                    <button
+                      key={option.seconds}
+                      type="button"
+                      onClick={() => savePosterBlob(option.blob, `${option.seconds}s`)}
+                      disabled={posterStatus === 'saving'}
+                      className="overflow-hidden rounded text-left disabled:opacity-50"
+                      style={{
+                        background: '#050505',
+                        border: selected ? '1px solid #f5e6d3' : '1px solid rgba(255,255,255,0.1)',
+                        boxShadow: selected ? '0 0 0 1px rgba(245,230,211,0.35)' : 'none',
+                      }}
+                    >
+                      <div style={{ position: 'relative' }}>
+                        <img
+                          src={option.previewUrl}
+                          alt={`${option.seconds}s poster option`}
+                          style={{ width: '100%', aspectRatio: '16 / 9', objectFit: 'cover', display: 'block' }}
+                        />
+                        {selected && (
+                          <span
+                            className="font-mono text-[9px] uppercase tracking-widest"
+                            style={{
+                              position: 'absolute',
+                              top: 6,
+                              right: 6,
+                              color: '#0a0a0a',
+                              background: '#f5e6d3',
+                              borderRadius: 999,
+                              padding: '3px 6px',
+                            }}
+                          >
+                            Selected
+                          </span>
+                        )}
+                      </div>
+                      <span className="block px-2 py-1 font-mono text-[10px] text-[#888]">{option.seconds}s</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -740,6 +1015,93 @@ function BannerManager() {
   );
 }
 
+function BtsEditPanel({ item, onSave }) {
+  const [title, setTitle] = useState(item.title || '');
+  const [label, setLabel] = useState(item.label || '');
+  const [year, setYear] = useState(item.year || new Date().getFullYear().toString());
+  const [sortOrder, setSortOrder] = useState((item.sort_order ?? 99).toString());
+  const [published, setPublished] = useState(!!item.published);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    setTitle(item.title || '');
+    setLabel(item.label || '');
+    setYear(item.year || new Date().getFullYear().toString());
+    setSortOrder((item.sort_order ?? 99).toString());
+    setPublished(!!item.published);
+  }, [item]);
+
+  async function submit(e) {
+    e.preventDefault();
+    setSaving(true);
+    await onSave(item.id, {
+      title: title.trim(),
+      label: label.trim() || `BTS - ${year}`,
+      year,
+      sort_order: parseInt(sortOrder) || 99,
+      published,
+      credits: { ...(item.credits || {}), Year: year },
+    });
+    setSaving(false);
+  }
+
+  return (
+    <form onSubmit={submit} className="grid grid-cols-2 gap-4">
+      <div className="col-span-2">
+        <label className="font-mono text-xs text-[#666] uppercase tracking-widest block mb-2">Title</label>
+        <input
+          value={title}
+          onChange={e => setTitle(e.target.value)}
+          className="w-full bg-[#111] border border-white/10 rounded px-3 py-2 text-sm text-[#e8e8e8] outline-none focus:border-white/30"
+        />
+      </div>
+      <div>
+        <label className="font-mono text-xs text-[#666] uppercase tracking-widest block mb-2">Label</label>
+        <input
+          value={label}
+          onChange={e => setLabel(e.target.value)}
+          className="w-full bg-[#111] border border-white/10 rounded px-3 py-2 text-sm text-[#e8e8e8] outline-none focus:border-white/30"
+        />
+      </div>
+      <div>
+        <label className="font-mono text-xs text-[#666] uppercase tracking-widest block mb-2">Year</label>
+        <input
+          value={year}
+          onChange={e => setYear(e.target.value)}
+          className="w-full bg-[#111] border border-white/10 rounded px-3 py-2 text-sm text-[#e8e8e8] outline-none focus:border-white/30"
+        />
+      </div>
+      <div>
+        <label className="font-mono text-xs text-[#666] uppercase tracking-widest block mb-2">Sort order</label>
+        <input
+          type="number"
+          value={sortOrder}
+          onChange={e => setSortOrder(e.target.value)}
+          className="w-full bg-[#111] border border-white/10 rounded px-3 py-2 text-sm text-[#e8e8e8] outline-none focus:border-white/30"
+        />
+      </div>
+      <div className="flex items-end">
+        <button
+          type="button"
+          onClick={() => setPublished(v => !v)}
+          className={`text-xs px-3 py-2 rounded ${published ? 'bg-green-900/40 text-green-400' : 'bg-white/5 text-[#666]'}`}
+        >
+          {published ? 'Live in Off Camera' : 'Draft'}
+        </button>
+      </div>
+      <div className="col-span-2">
+        <button
+          type="submit"
+          disabled={saving || !title.trim()}
+          className="bg-[#f5e6d3] text-[#0a0a0a] px-5 py-2.5 text-xs font-medium rounded disabled:opacity-40"
+        >
+          {saving ? 'Saving...' : 'Save changes'}
+        </button>
+      </div>
+    </form>
+  );
+}
+
 function BtsManager({ items, onRefresh }) {
   const [title, setTitle] = useState('');
   const [label, setLabel] = useState('');
@@ -750,6 +1112,7 @@ function BtsManager({ items, onRefresh }) {
   const [thumbnailUrl, setThumbnailUrl] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [activePanel, setActivePanel] = useState(null);
 
   const slug = title ? `bts-${slugify(title)}` : 'bts-video';
 
@@ -800,7 +1163,7 @@ function BtsManager({ items, onRefresh }) {
 
   async function deleteItem(item) {
     if (!confirm(`Delete "${item.title}"? This removes the BTS record and its R2 video files.`)) return;
-    const keys = [item.video_url, item.thumbnail_url].filter(Boolean).map(url => url.split('/').pop());
+    const keys = [item.video_url, item.thumbnail_url].filter(Boolean).map(r2KeyFromUrl);
 
     if (keys.length > 0) {
       const res = await fetch('/api/r2-delete', {
@@ -817,6 +1180,30 @@ function BtsManager({ items, onRefresh }) {
 
     await supabase.from('projects').delete().eq('id', item.id);
     onRefresh();
+  }
+
+  async function updateItemVideo(id, nextVideoUrl, nextThumbnailUrl) {
+    const update = { video_url: nextVideoUrl };
+    if (nextThumbnailUrl) update.thumbnail_url = nextThumbnailUrl;
+    const { error: updateErr } = await supabase.from('projects').update(update).eq('id', id);
+    if (updateErr) {
+      alert('Could not update BTS video:\n' + updateErr.message);
+      return;
+    }
+    onRefresh();
+  }
+
+  async function updateItemDetails(id, update) {
+    const { error: updateErr } = await supabase.from('projects').update(update).eq('id', id);
+    if (updateErr) {
+      alert('Could not update BTS details:\n' + updateErr.message);
+      return;
+    }
+    onRefresh();
+  }
+
+  function togglePanel(id, mode) {
+    setActivePanel(current => current?.id === id && current?.mode === mode ? null : { id, mode });
   }
 
   return (
@@ -897,22 +1284,53 @@ function BtsManager({ items, onRefresh }) {
         <div className="space-y-2">
           <p className="font-mono text-xs text-[#666] uppercase tracking-widest mb-4">Uploaded BTS videos</p>
           {items.map(item => (
-            <div key={item.id} className="flex items-center gap-4 border border-white/6 rounded px-4 py-3">
-              <div className="flex-shrink-0 bg-white/5 rounded overflow-hidden" style={{ width: '140px', height: '78px' }}>
-                {item.thumbnail_url ? (
-                  <img src={item.thumbnail_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                ) : (
-                  <video src={item.video_url} muted playsInline preload="metadata" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                )}
+            <div key={item.id} className="border border-white/6 rounded overflow-hidden">
+              <div className="flex items-center gap-4 px-4 py-3">
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm text-[#e8e8e8] truncate">{item.title}</p>
+                  <p className="font-mono text-xs text-[#666]">{item.label} / order: {item.sort_order}</p>
+                </div>
+                <span className={`text-xs px-2 py-1 rounded ${item.published ? 'bg-green-900/40 text-green-400' : 'bg-white/5 text-[#666]'}`}>
+                  {item.published ? 'Live' : 'Draft'}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => togglePanel(item.id, 'edit')}
+                  className={`text-xs ${activePanel?.id === item.id && activePanel?.mode === 'edit' ? 'text-[#f5e6d3]' : 'text-[#888] hover:text-[#f5e6d3]'}`}
+                >
+                  Edit
+                </button>
+                <button
+                  type="button"
+                  onClick={() => togglePanel(item.id, 'poster')}
+                  className={`text-xs ${activePanel?.id === item.id && activePanel?.mode === 'poster' ? 'text-[#f5e6d3]' : 'text-[#888] hover:text-[#f5e6d3]'}`}
+                >
+                  Poster
+                </button>
+                <button onClick={() => deleteItem(item)} className="text-red-800 hover:text-red-500 text-xs">Delete</button>
               </div>
-              <div className="flex-1">
-                <p className="text-sm text-[#e8e8e8]">{item.title}</p>
-                <p className="font-mono text-xs text-[#666]">{item.label} / order: {item.sort_order}</p>
-              </div>
-              <span className={`text-xs px-2 py-1 rounded ${item.published ? 'bg-green-900/40 text-green-400' : 'bg-white/5 text-[#666]'}`}>
-                {item.published ? 'Live' : 'Draft'}
-              </span>
-              <button onClick={() => deleteItem(item)} className="text-red-800 hover:text-red-500 text-xs">Delete</button>
+
+              {activePanel?.id === item.id && (
+                <div className="border-t border-white/6 px-4 py-4 bg-black/20">
+                  {activePanel.mode === 'edit' ? (
+                    <BtsEditPanel item={item} onSave={updateItemDetails} />
+                  ) : (
+                    <VideoUpload
+                      label="BTS poster and video"
+                      field="video_url"
+                      slug={item.slug || `bts-${slugify(item.title)}`}
+                      projectId={item.id}
+                      value={item.video_url}
+                      thumbnail={item.thumbnail_url}
+                      onChange={() => {}}
+                      onThumbnailChange={() => {}}
+                      onAutoSave={(nextVideoUrl, nextThumbnailUrl) => updateItemVideo(item.id, nextVideoUrl, nextThumbnailUrl)}
+                      onPosterSaved={onRefresh}
+                      onDeleted={onRefresh}
+                    />
+                  )}
+                </div>
+              )}
             </div>
           ))}
         </div>
@@ -1069,6 +1487,7 @@ function LogoManager({ logos, onRefresh }) {
               <div className="flex items-center justify-center flex-shrink-0 bg-white/5 rounded" style={{ width: '140px', height: '52px' }}>
                 <img
                   src={logo.logo_url} alt={logo.name}
+                  crossOrigin="anonymous"
                   style={{ maxHeight: '40px', maxWidth: '130px', width: 'auto', height: 'auto', objectFit: 'contain' }}
                 />
               </div>
