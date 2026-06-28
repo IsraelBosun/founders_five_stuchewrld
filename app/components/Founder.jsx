@@ -1,8 +1,16 @@
+import { supabase } from "../../lib/supabase";
+import { mergeFounderContent } from "../data/founderContent";
 import ScrollReveal from "./ScrollReveal";
 
-const founderImage = "/bts/photo_4.jpeg";
+export default async function Founder() {
+  const { data } = await supabase
+    .from("founder_content")
+    .select("*")
+    .eq("id", "main")
+    .maybeSingle();
+  const founder = mergeFounderContent(data);
+  const quoteLines = (founder.homepage_quote || "").split("\n");
 
-export default function Founder() {
   return (
     <section
       id="founder"
@@ -25,7 +33,7 @@ export default function Founder() {
             marginBottom: "3rem",
           }}
         >
-          04 / THE FOUNDER
+          {founder.section_kicker}
         </span>
       </ScrollReveal>
 
@@ -49,8 +57,9 @@ export default function Founder() {
           }}
         >
           <img
-            src={founderImage}
-            alt="Stephen Uche filming behind the scenes"
+            src={founder.image_url}
+            alt={founder.image_alt}
+            crossOrigin={founder.image_url?.startsWith("http") ? "anonymous" : undefined}
             style={{
               width: "100%",
               height: "100%",
@@ -81,7 +90,7 @@ export default function Founder() {
               textTransform: "uppercase",
             }}
           >
-            STEPHEN UCHE
+            {founder.name}
           </span>
         </ScrollReveal>
 
@@ -97,8 +106,13 @@ export default function Founder() {
                 fontStyle: "italic",
               }}
             >
-              &ldquo;I don&apos;t shoot scenes.
-              <br />I chase feelings.&rdquo;
+              &ldquo;{quoteLines[0]}
+              {quoteLines.slice(1).map((line) => (
+                <span key={line}>
+                  <br />
+                  {line}
+                </span>
+              ))}&rdquo;
             </p>
           </blockquote>
 
@@ -111,9 +125,7 @@ export default function Founder() {
               maxWidth: "380px",
             }}
           >
-            Stephen Uche, Creative Director of STUCHEWRLD Inc. A storyteller
-            behind the lens for over a decade, building visual worlds for
-            brands and artists across the continent.
+            {founder.homepage_body}
           </p>
 
           <div>
@@ -128,7 +140,7 @@ export default function Founder() {
                 marginBottom: "10px",
               }}
             >
-              FOUNDER PROFILE
+              {founder.homepage_profile_label}
             </span>
             <a
               href="/founder"
@@ -149,7 +161,7 @@ export default function Founder() {
                 textDecoration: "none",
               }}
             >
-              VIEW MORE &rarr;
+              {founder.homepage_link_text} &rarr;
             </a>
           </div>
         </ScrollReveal>

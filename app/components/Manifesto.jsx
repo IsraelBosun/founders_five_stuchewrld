@@ -1,4 +1,8 @@
-export default function Manifesto() {
+import { mergeBannerContent } from "../data/bannerContent";
+
+export default function Manifesto({ content }) {
+  const banner = mergeBannerContent(content);
+
   return (
     <section
       id="manifesto"
@@ -16,7 +20,6 @@ export default function Manifesto() {
           gap: "2.5rem",
         }}
       >
-        {/* Label */}
         <span
           style={{
             fontFamily: "var(--font-mono)",
@@ -26,10 +29,9 @@ export default function Manifesto() {
             textTransform: "uppercase",
           }}
         >
-          01 / MFSTO
+          {banner.manifesto_label}
         </span>
 
-        {/* Body */}
         <p
           style={{
             fontFamily: "var(--font-body)",
@@ -39,9 +41,7 @@ export default function Manifesto() {
             maxWidth: "640px",
           }}
         >
-          We make films that don&apos;t let go. Cinematic storytelling that
-          resonates long after the screen goes dark — for the brands and the
-          dreamers building something worth watching.
+          {banner.manifesto_body}
         </p>
       </div>
     </section>

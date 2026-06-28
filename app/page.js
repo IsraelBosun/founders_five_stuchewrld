@@ -9,11 +9,19 @@ import Founder from "./components/Founder";
 import Testimonial from "./components/Testimonial";
 import BookSlot from "./components/BookSlot";
 import Footer from "./components/Footer";
+import { mergeBannerContent } from "./data/bannerContent";
 
 export default async function Home() {
   const videoCdn = process.env.NEXT_PUBLIC_VIDEO_CDN;
   const bannerVideoUrl = videoCdn ? `${videoCdn}/banner-hero.mp4` : "";
   const bannerPosterUrl = videoCdn ? `${videoCdn}/banner-hero-poster.jpg` : "";
+
+  const { data: bannerContent } = await supabase
+    .from("banner_content")
+    .select("*")
+    .eq("id", "main")
+    .maybeSingle();
+  const banner = mergeBannerContent(bannerContent);
 
   const { data: projects } = await supabase
     .from("projects")
@@ -25,8 +33,8 @@ export default async function Home() {
     <>
       <Nav />
       <main>
-        <Hero bannerVideoUrl={bannerVideoUrl} bannerPosterUrl={bannerPosterUrl} />
-        <Manifesto />
+        <Hero bannerVideoUrl={bannerVideoUrl} bannerPosterUrl={bannerPosterUrl} content={banner} />
+        <Manifesto content={banner} />
         <SelectedWork projects={projects ?? []} />
         <TrustedBy />
         <OffCamera />

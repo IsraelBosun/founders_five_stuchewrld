@@ -1,17 +1,6 @@
-import Image from "next/image";
 import { supabase } from "../../lib/supabase";
+import { btsPolaroids } from "../data/btsPolaroids";
 import ScrollReveal from "./ScrollReveal";
-
-const polaroids = [
-  { src: "/bts/photo_1.jpeg", label: "SET · A4:24", rotate: "-2deg" },
-  { src: "/bts/photo_2.jpeg", label: "GHP · B30", rotate: "1.5deg" },
-  { src: "/bts/photo_3.jpeg", label: "LAPS", rotate: "-1deg" },
-  { src: "/bts/photo_4.jpeg", label: "LAGOS · 12PM", rotate: "2deg" },
-  { src: "/bts/photo_5.jpeg", label: "SET · CALL", rotate: "-1.5deg" },
-  { src: "/bts/photo_6.jpeg", label: "TAKE TWO", rotate: "1deg" },
-  { src: "/bts/photo_7.jpeg", label: "GRIP · 09AM", rotate: "-0.5deg" },
-  { src: "/bts/photo_8.jpeg", label: "WRAP", rotate: "2.5deg" },
-];
 
 export default async function OffCamera() {
   const { data: btsVideos } = await supabase
@@ -21,6 +10,19 @@ export default async function OffCamera() {
     .eq("category", "BTS")
     .order("sort_order", { ascending: true })
     .limit(2);
+  const { data: uploadedBtsImages } = await supabase
+    .from("bts_images")
+    .select("id, label, alt_text, image_url, sort_order, rotate")
+    .eq("published", true)
+    .order("sort_order", { ascending: true });
+  const polaroids = uploadedBtsImages?.length
+    ? uploadedBtsImages.map((image) => ({
+        src: image.image_url,
+        label: image.label,
+        alt: image.alt_text || `BTS - ${image.label}`,
+        rotate: image.rotate || "0deg",
+      }))
+    : btsPolaroids;
 
   return (
     <section
@@ -177,12 +179,10 @@ export default async function OffCamera() {
                 overflow: "hidden",
               }}
             >
-              <Image
+              <img
                 src={p.src}
-                alt={`BTS — ${p.label}`}
-                fill
-                style={{ objectFit: "cover" }}
-                sizes="(max-width: 640px) 45vw, (max-width: 1024px) 22vw, 200px"
+                alt={p.alt || `BTS - ${p.label}`}
+                style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
               />
             </div>
             <p
@@ -205,3 +205,5 @@ export default async function OffCamera() {
     </section>
   );
 }
+
+

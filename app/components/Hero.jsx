@@ -1,8 +1,31 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { mergeBannerContent } from "../data/bannerContent";
 
-export default function Hero({ bannerVideoUrl, bannerPosterUrl }) {
+function renderHeadline(headline, emphasis) {
+  const lines = (headline || "").split("\n");
+  const emphasisText = (emphasis || "").trim();
+
+  return lines.map((line, lineIndex) => {
+    const parts = emphasisText ? line.split(emphasisText) : [line];
+
+    return (
+      <span key={`${line}-${lineIndex}`}>
+        {parts.map((part, partIndex) => (
+          <span key={`${part}-${partIndex}`}>
+            {part}
+            {partIndex < parts.length - 1 && <em>{emphasisText}</em>}
+          </span>
+        ))}
+        {lineIndex < lines.length - 1 && <br />}
+      </span>
+    );
+  });
+}
+
+export default function Hero({ bannerVideoUrl, bannerPosterUrl, content }) {
+  const banner = mergeBannerContent(content);
   const [isPlayerOpen, setIsPlayerOpen] = useState(false);
   const playerRef = useRef(null);
 
@@ -68,7 +91,6 @@ export default function Hero({ bannerVideoUrl, bannerPosterUrl }) {
           background: "linear-gradient(180deg, rgba(10,10,10,0.35) 0%, rgba(10,10,10,0.72) 66%, #0A0A0A 100%)",
         }}
       />
-      {/* Constrained content */}
       <div
         className="container hero-content"
         style={{
@@ -78,7 +100,6 @@ export default function Hero({ bannerVideoUrl, bannerPosterUrl }) {
           zIndex: 1,
         }}
       >
-        {/* Top label */}
         <p
           style={{
             fontFamily: "var(--font-mono)",
@@ -88,10 +109,9 @@ export default function Hero({ bannerVideoUrl, bannerPosterUrl }) {
             textTransform: "uppercase",
           }}
         >
-          EST. STUCHEWRLD INC · CINEMATIC STORYTELLING
+          {banner.hero_eyebrow}
         </p>
 
-        {/* Headline */}
         <h1
           className="hero-title"
           style={{
@@ -102,14 +122,9 @@ export default function Hero({ bannerVideoUrl, bannerPosterUrl }) {
             maxWidth: "860px",
           }}
         >
-          Every brand has
-          <br />
-          a story. We bring
-          <br />
-          <em>yours</em> to life.
+          {renderHeadline(banner.hero_headline, banner.hero_headline_emphasis)}
         </h1>
 
-        {/* Showreel row */}
         <div
           style={{
             display: "flex",
@@ -149,7 +164,7 @@ export default function Hero({ bannerVideoUrl, bannerPosterUrl }) {
                 textTransform: "uppercase",
               }}
             >
-              SHOWREEL · 2026
+              {banner.showreel_label}
             </span>
           </div>
 
@@ -162,10 +177,9 @@ export default function Hero({ bannerVideoUrl, bannerPosterUrl }) {
               textTransform: "uppercase",
             }}
           >
-            SCROLL ↓
+            {banner.scroll_label}
           </span>
         </div>
-
       </div>
       {isPlayerOpen && bannerVideoUrl && (
         <div

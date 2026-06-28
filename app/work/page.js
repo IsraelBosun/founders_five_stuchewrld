@@ -17,12 +17,17 @@ export default async function WorkIndexPage({ searchParams }) {
     .select("slug, title, client, category, label, year, gradient, video_url, preview_url, thumbnail_url")
     .eq("published", true)
     .order("sort_order", { ascending: true });
+  const { data: btsImages } = await supabase
+    .from("bts_images")
+    .select("id, label, alt_text, image_url, sort_order, rotate")
+    .eq("published", true)
+    .order("sort_order", { ascending: true });
 
   return (
     <>
       <Nav />
       <main>
-        <WorkArchive projects={projects ?? []} initialCategory={initialCategory} />
+        <WorkArchive projects={projects ?? []} btsImages={btsImages ?? []} initialCategory={initialCategory} />
       </main>
       <Footer />
     </>

@@ -11,10 +11,10 @@ function ViewMoreCard({ active }) {
   const href = active === "ALL" ? "/work" : `/work?category=${encodeURIComponent(active)}`;
   return (
     <Link href={href} className="work-view-more-card">
-      <span className="work-view-more-kicker">Archive</span>
-      <strong>View more work</strong>
-      <span className="work-view-more-line" />
-      <small>All films, campaigns, events and brand stories.</small>
+      <span className="work-view-more-mark" aria-hidden="true">
+        <span />
+      </span>
+      <strong>View more</strong>
     </Link>
   );
 }
@@ -118,7 +118,7 @@ export default function SelectedWork({ projects = [] }) {
               </div>
             ))}
             {showViewMore && (
-              <div className="selected-work-card">
+              <div className="selected-work-card selected-work-more-item">
                 <ViewMoreCard active={active} />
               </div>
             )}

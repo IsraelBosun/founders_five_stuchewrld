@@ -1,72 +1,77 @@
+import { supabase } from "../../lib/supabase";
+import { mergeFounderContent } from "../data/founderContent";
 import Nav from "../components/Nav";
 import Footer from "../components/Footer";
 import ScrollReveal from "../components/ScrollReveal";
-
-const founderImage = "/bts/photo_4.jpeg";
 
 export const metadata = {
   title: "Founder - STUCHEWRLD Inc.",
   description: "Stephen Uche, founder and creative director of STUCHEWRLD Inc.",
 };
 
-export default function FounderPage() {
+export default async function FounderPage() {
+  const { data } = await supabase
+    .from("founder_content")
+    .select("*")
+    .eq("id", "main")
+    .maybeSingle();
+  const founder = mergeFounderContent(data);
+  const notes = [
+    ["01", founder.note_one_title, founder.note_one_body],
+    ["02", founder.note_two_title, founder.note_two_body],
+    ["03", founder.note_three_title, founder.note_three_body],
+  ];
+
   return (
     <>
       <Nav />
       <main className="founder-page">
         <section className="section-pad founder-page-hero">
           <ScrollReveal className="founder-page-kicker" delay={40}>
-            04 / THE FOUNDER
+            {founder.section_kicker}
           </ScrollReveal>
 
           <div className="founder-page-grid">
             <ScrollReveal className="founder-page-copy" delay={100}>
-              <p className="founder-page-eyebrow">Stephen Uche / Creative Director</p>
-              <h1 className="founder-page-title">Behind the lens, chasing the feeling.</h1>
+              <p className="founder-page-eyebrow">{founder.page_eyebrow}</p>
+              <h1 className="founder-page-title">{founder.page_title}</h1>
               <p className="founder-page-lede">
-                Stephen Uche is the founder and creative director of STUCHEWRLD Inc.,
-                a cinematic storytelling studio built around films that carry mood,
-                memory, and meaning.
+                {founder.page_lede}
               </p>
             </ScrollReveal>
 
             <ScrollReveal className="founder-page-image-wrap" delay={180}>
-              <img src={founderImage} alt="Stephen Uche filming behind the scenes" />
-              <span>On set / Lagos</span>
+              <img
+                src={founder.image_url}
+                alt={founder.image_alt}
+                crossOrigin={founder.image_url?.startsWith("http") ? "anonymous" : undefined}
+              />
+              <span>{founder.image_caption}</span>
             </ScrollReveal>
           </div>
         </section>
 
         <section className="section-pad founder-page-story">
           <ScrollReveal className="founder-page-quote" delay={80}>
-            &ldquo;I don&apos;t shoot scenes. I chase feelings.&rdquo;
+            &ldquo;{founder.page_quote}&rdquo;
           </ScrollReveal>
 
           <div className="founder-page-story-grid">
             <ScrollReveal delay={140}>
               <p className="founder-page-body">
-                His work sits between brand film, music visuals, event coverage, and
-                documentary-style storytelling. The throughline is simple: make the
-                subject feel alive before it feels produced.
+                {founder.story_body_one}
               </p>
             </ScrollReveal>
             <ScrollReveal delay={220}>
               <p className="founder-page-body">
-                STUCHEWRLD was shaped for clients who want more than clean footage.
-                The studio builds visual worlds around people, products, founders,
-                stages, launches, and campaigns, then turns those moments into films
-                that can travel.
+                {founder.story_body_two}
               </p>
             </ScrollReveal>
           </div>
         </section>
 
         <section className="section-pad founder-page-notes">
-          {[
-            ["01", "Direction", "Finding the emotional center of the story before the camera rolls."],
-            ["02", "Production", "Building lean, cinematic shoots for brands, artists, and events."],
-            ["03", "Post", "Shaping rhythm, color, sound, and sequence until the film holds."],
-          ].map(([number, title, body], index) => (
+          {notes.map(([number, title, body], index) => (
             <ScrollReveal key={title} className="founder-page-note" delay={100 + index * 80}>
               <span>{number}</span>
               <h2>{title}</h2>
