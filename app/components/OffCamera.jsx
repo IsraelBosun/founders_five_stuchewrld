@@ -149,6 +149,7 @@ export default async function OffCamera() {
 
       {/* Polaroid grid */}
       <div
+        className="bts-polaroid-grid"
         style={{
           display: "grid",
           gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))",
@@ -161,7 +162,7 @@ export default async function OffCamera() {
             delay={(i % 4) * 70}
           >
             <div
-            className="polaroid"
+            className="polaroid bts-polaroid-card"
             style={{
               background: "white",
               padding: "12px",

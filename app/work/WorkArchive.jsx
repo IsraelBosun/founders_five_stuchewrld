@@ -1,13 +1,20 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { btsPolaroids } from "../data/btsPolaroids";
 import ScrollReveal from "../components/ScrollReveal";
 import WorkPreviewCard from "../components/WorkPreviewCard";
 
-const filters = ["ALL", "MUSIC", "BRAND", "CORPORATE", "EVENTS", "OUTREACH", "BTS"];
+const categoryOrder = ["MUSIC", "BRAND", "CORPORATE", "EVENTS", "OUTREACH", "BTS"];
 
 export default function WorkArchive({ projects = [], btsImages = [], initialCategory = "ALL" }) {
+  const filters = useMemo(() => {
+    const available = new Set(projects.map((project) => project.category).filter(Boolean));
+    if (btsImages.length > 0) available.add("BTS");
+    const ordered = categoryOrder.filter((category) => available.has(category));
+    const custom = [...available].filter((category) => !categoryOrder.includes(category)).sort();
+    return ["ALL", ...ordered, ...custom];
+  }, [btsImages.length, projects]);
   const normalizedInitial = filters.includes(initialCategory) ? initialCategory : "ALL";
   const [active, setActive] = useState(normalizedInitial);
 
@@ -24,6 +31,10 @@ export default function WorkArchive({ projects = [], btsImages = [], initialCate
       }))
     : btsPolaroids;
   const visibleCount = visible.length + (showBtsStills ? btsStills.length : 0);
+
+  useEffect(() => {
+    if (!filters.includes(active)) setActive("ALL");
+  }, [active, filters]);
 
   return (
     <section className="work-archive">

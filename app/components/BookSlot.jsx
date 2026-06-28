@@ -1,8 +1,14 @@
+import { supabase } from "../../lib/supabase";
+import { mergeContactContent } from "../data/contactContent";
 import ScrollReveal from "./ScrollReveal";
 
-export default function BookSlot() {
-  const whatsappUrl =
-    "https://wa.me/2349034320189?text=Hi%2C%20I%27d%20like%20to%20book%20a%20slot%20with%20STUCHEWRLD%20Inc.";
+export default async function BookSlot() {
+  const { data } = await supabase
+    .from("contact_content")
+    .select("*")
+    .eq("id", "main")
+    .maybeSingle();
+  const contact = mergeContactContent(data);
 
   return (
     <section
@@ -26,9 +32,12 @@ export default function BookSlot() {
             marginBottom: "4rem",
           }}
         >
-          Got a story
-          <br />
-          worth telling?
+          {contact.book_heading.split("\n").map((line, index) => (
+            <span key={`${line}-${index}`}>
+              {index > 0 && <br />}
+              {line}
+            </span>
+          ))}
         </h2>
 
         <div
@@ -41,7 +50,7 @@ export default function BookSlot() {
           }}
         >
           <a
-            href="mailto:stuchewrld.inc@gmail.com"
+            href={`mailto:${contact.email}`}
             className="btn-outline"
             style={{
               fontFamily: "var(--font-mono)",
@@ -55,11 +64,11 @@ export default function BookSlot() {
               gap: "8px",
             }}
           >
-            BOOK A SLOT ↓
+            {contact.book_email_label}
           </a>
 
           <a
-            href={whatsappUrl}
+            href={contact.whatsapp_url}
             target="_blank"
             rel="noopener noreferrer"
             className="btn-outline"
@@ -75,7 +84,7 @@ export default function BookSlot() {
               gap: "8px",
             }}
           >
-            WHATSAPP US
+            {contact.book_whatsapp_label}
           </a>
         </div>
       </ScrollReveal>

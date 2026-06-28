@@ -1,11 +1,15 @@
-const socials = [
-  { label: "IG", href: "https://instagram.com/stuchewrldinc" },
-  { label: "TIKTOK", href: "https://tiktok.com/stuchewrldinc" },
-  { label: "YT", href: "https://youtube.com/stuchewrld.inc" },
-  { label: "VIMEO", href: "https://vimeo.com/stuchewrldinc" },
-];
+import { supabase } from "../../lib/supabase";
+import { getFooterSocials, mergeContactContent } from "../data/contactContent";
 
-export default function Footer() {
+export default async function Footer() {
+  const { data } = await supabase
+    .from("contact_content")
+    .select("*")
+    .eq("id", "main")
+    .maybeSingle();
+  const contact = mergeContactContent(data);
+  const socials = getFooterSocials(contact);
+
   return (
     <footer
       id="contact"
@@ -31,13 +35,13 @@ export default function Footer() {
           fontWeight: 500,
         }}
       >
-        STUCHEWRLD © 2026
+        {contact.footer_brand}
       </span>
 
       <nav style={{ display: "flex", alignItems: "center", gap: "2rem" }}>
-        {socials.map(({ label, href }) => (
+        {socials.map(({ footer_label, href }) => (
           <a
-            key={label}
+            key={footer_label}
             href={href}
             target="_blank"
             rel="noopener noreferrer"
@@ -52,7 +56,7 @@ export default function Footer() {
               transition: "color 0.2s",
             }}
           >
-            {label}
+            {footer_label}
           </a>
         ))}
       </nav>

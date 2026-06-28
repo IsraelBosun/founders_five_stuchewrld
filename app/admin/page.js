@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { founderContentDefaults, mergeFounderContent } from '../data/founderContent';
 import { bannerContentDefaults, mergeBannerContent } from '../data/bannerContent';
+import { contactContentDefaults, mergeContactContent, normalizeSocials } from '../data/contactContent';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -11,12 +12,17 @@ const supabase = createClient(
 );
 
 const CATEGORIES = ['MUSIC', 'BRAND', 'CORPORATE', 'EVENTS', 'OUTREACH', 'BTS'];
+const CUSTOM_CATEGORY = '__CUSTOM__';
 const VIDEO_CDN = process.env.NEXT_PUBLIC_VIDEO_CDN;
 const BANNER_VIDEO_KEY = 'banner-hero.mp4';
 const BANNER_POSTER_KEY = 'banner-hero-poster.jpg';
 
 function slugify(str) {
   return str.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+}
+
+function normalizeCategory(value) {
+  return (value || '').trim().replace(/\s+/g, ' ').toUpperCase();
 }
 
 function r2KeyFromUrl(url) {
@@ -104,27 +110,61 @@ function LoginScreen() {
 // ─── Shell (tabs + header) ────────────────────────────────────────────────────
 
 function Shell({ tab, setTab, onLogout, children }) {
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const tabs = ['projects', 'banner', 'contact', 'bts', 'founder', 'logos'];
+
+  function chooseTab(nextTab) {
+    setTab(nextTab);
+    setSidebarOpen(false);
+  }
+
   return (
-    <div className="admin-shell min-h-screen bg-[#0a0a0a] text-[#e8e8e8]">
-      <header className="admin-header border-b border-white/6 sticky top-0 bg-[#0a0a0a] z-10">
+    <div className={`admin-shell min-h-screen bg-[#0a0a0a] text-[#e8e8e8] ${sidebarOpen ? 'admin-sidebar-open' : ''}`}>
+      <header className="admin-header admin-shell-topbar border-b border-white/6 sticky top-0 bg-[#0a0a0a] z-30">
         <div className="admin-header-inner flex items-center justify-between">
-        <span className="admin-title font-mono text-xs tracking-[0.2em] text-[#666] uppercase">STUCHEWRLD / Admin</span>
-        <div className="admin-header-actions flex items-center gap-6">
-          <nav className="admin-tabs flex gap-4">
-            {['projects', 'banner', 'bts', 'founder', 'logos'].map(t => (
-              <button
-                key={t}
-                onClick={() => setTab(t)}
-                className={`font-mono text-xs uppercase tracking-widest ${tab === t ? 'text-[#f5e6d3]' : 'text-[#666] hover:text-[#888]'}`}
-              >
-                {t}
-              </button>
-            ))}
-          </nav>
-          <button onClick={onLogout} className="admin-sign-out text-[#666] text-xs hover:text-[#888]">Sign out</button>
-        </div>
+          <span className="admin-title font-mono text-xs tracking-[0.2em] text-[#666] uppercase">STUCHEWRLD / Admin</span>
+          <div className="admin-header-actions flex items-center gap-3">
+            <a href="/" target="_blank" rel="noreferrer" className="admin-view-site">View site</a>
+            <button
+              type="button"
+              onClick={() => setSidebarOpen(open => !open)}
+              className="admin-menu-toggle"
+              aria-label={sidebarOpen ? 'Close admin menu' : 'Open admin menu'}
+              aria-expanded={sidebarOpen}
+            >
+              <span />
+              <span />
+            </button>
+          </div>
         </div>
       </header>
+      <button
+        type="button"
+        className="admin-sidebar-scrim"
+        aria-label="Close admin menu"
+        onClick={() => setSidebarOpen(false)}
+      />
+      <aside className="admin-sidebar" aria-label="Admin navigation">
+        <div className="admin-sidebar-brand">
+          <span className="admin-title font-mono text-xs tracking-[0.2em] text-[#666] uppercase">STUCHEWRLD</span>
+          <small>Admin studio</small>
+        </div>
+        <nav className="admin-tabs">
+          {tabs.map(t => (
+            <button
+              key={t}
+              onClick={() => chooseTab(t)}
+              className={`font-mono text-xs uppercase tracking-widest ${tab === t ? 'is-active text-[#f5e6d3]' : 'text-[#666] hover:text-[#888]'}`}
+            >
+              {t}
+            </button>
+          ))}
+        </nav>
+        <div className="admin-sidebar-actions">
+          <a href="/" target="_blank" rel="noreferrer" className="admin-sidebar-link">View page</a>
+          <button onClick={onLogout} className="admin-sign-out text-[#666] text-xs hover:text-[#888]">Sign out</button>
+        </div>
+      </aside>
       <main className="admin-main">
         {children}
       </main>
@@ -871,9 +911,28 @@ function CreditsEditor({ value, onChange }) {
 function ProjectForm({ initial, onSave, onCancel, saving, onAutoSave }) {
   const [form, setForm] = useState({ ...EMPTY, ...initial });
   const [hasTestimonial, setHasTestimonial] = useState(!!initial?.testimonial);
+  const initialCategory = normalizeCategory(initial?.category || EMPTY.category);
+  const hasCustomCategory = initialCategory && !CATEGORIES.includes(initialCategory);
+  const [categoryMode, setCategoryMode] = useState(hasCustomCategory ? CUSTOM_CATEGORY : initialCategory);
+  const [customCategory, setCustomCategory] = useState(hasCustomCategory ? initialCategory : '');
 
   function set(key, val) {
     setForm(f => ({ ...f, [key]: val }));
+  }
+
+  function updateCategoryMode(value) {
+    setCategoryMode(value);
+    if (value === CUSTOM_CATEGORY) {
+      set('category', customCategory);
+      return;
+    }
+    set('category', value);
+  }
+
+  function updateCustomCategory(value) {
+    const normalized = normalizeCategory(value);
+    setCustomCategory(normalized);
+    set('category', normalized);
   }
 
   function handleTitleBlur() {
@@ -883,7 +942,12 @@ function ProjectForm({ initial, onSave, onCancel, saving, onAutoSave }) {
 
   function submit(e) {
     e.preventDefault();
-    onSave({ ...form, testimonial: hasTestimonial ? form.testimonial : null });
+    const category = categoryMode === CUSTOM_CATEGORY ? normalizeCategory(customCategory) : normalizeCategory(form.category);
+    if (!category || category === 'ALL') {
+      alert('Choose a category or enter a custom category.');
+      return;
+    }
+    onSave({ ...form, category, testimonial: hasTestimonial ? form.testimonial : null });
   }
 
   const field = (label, key, type = 'text', extra = {}) => (
@@ -934,11 +998,20 @@ function ProjectForm({ initial, onSave, onCancel, saving, onAutoSave }) {
           <div>
             <label className="font-mono text-xs text-[#666] uppercase tracking-widest block mb-2">Category</label>
             <select
-              value={form.category} onChange={e => set('category', e.target.value)}
+              value={categoryMode} onChange={e => updateCategoryMode(e.target.value)}
               className="w-full bg-[#111] border border-white/10 rounded px-3 py-2 text-sm text-[#e8e8e8] outline-none focus:border-white/30"
             >
               {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+              <option value={CUSTOM_CATEGORY}>CUSTOM</option>
             </select>
+            {categoryMode === CUSTOM_CATEGORY && (
+              <input
+                value={customCategory}
+                onChange={e => updateCustomCategory(e.target.value)}
+                placeholder="e.g. DOCUMENTARY"
+                className="mt-3 w-full bg-[#111] border border-white/10 rounded px-3 py-2 text-sm text-[#e8e8e8] outline-none focus:border-white/30"
+              />
+            )}
           </div>
           {field('Label', 'label')}
           {field('Year', 'year')}
@@ -2140,6 +2213,196 @@ function FounderManager({ content, error, onRefresh }) {
   );
 }
 
+function ContactManager({ content, error, onRefresh }) {
+  const contact = mergeContactContent(content);
+  const [form, setForm] = useState(contact);
+  const [saving, setSaving] = useState(false);
+  const [localError, setLocalError] = useState('');
+
+  useEffect(() => {
+    setForm(mergeContactContent(content));
+  }, [content]);
+
+  function setField(field, value) {
+    setForm(current => ({ ...current, [field]: value }));
+  }
+
+  function updateSocial(index, field, value) {
+    setForm(current => ({
+      ...current,
+      socials: current.socials.map((social, socialIndex) => (
+        socialIndex === index ? { ...social, [field]: value } : social
+      )),
+    }));
+  }
+
+  function addSocial() {
+    setForm(current => ({
+      ...current,
+      socials: [
+        ...current.socials,
+        { label: '', value: '', href: '', footer_label: '', show_footer: true },
+      ],
+    }));
+  }
+
+  function removeSocial(index) {
+    setForm(current => ({
+      ...current,
+      socials: current.socials.filter((_, socialIndex) => socialIndex !== index),
+    }));
+  }
+
+  async function save(e) {
+    e.preventDefault();
+    setSaving(true);
+    setLocalError('');
+
+    const payload = {
+      ...contactContentDefaults,
+      ...form,
+      id: 'main',
+      socials: normalizeSocials(form.socials).filter(social => social.label || social.value || social.href),
+      updated_at: new Date().toISOString(),
+    };
+    delete payload.created_at;
+
+    const { error: saveError } = await supabase
+      .from('contact_content')
+      .upsert(payload, { onConflict: 'id' });
+
+    if (saveError) {
+      setLocalError(saveError.message);
+      setSaving(false);
+      return;
+    }
+
+    setSaving(false);
+    onRefresh?.();
+  }
+
+  return (
+    <div className="admin-page-panel">
+      <form onSubmit={save} className="admin-card border border-white/6 rounded-lg p-6 space-y-6">
+        <div>
+          <p className="font-mono text-xs text-[#666] uppercase tracking-widest">Contact content</p>
+          <p className="text-[#888] text-sm mt-2">This controls the contact page, homepage booking CTA, and footer links.</p>
+        </div>
+
+        {error && (
+          <div className="rounded border border-amber-500/20 bg-amber-500/5 p-4">
+            <p className="text-amber-300 text-xs">Contact content table is not available yet.</p>
+            <p className="text-[#888] text-xs mt-2">Run the SQL in scripts/contact_content.sql in Supabase, then refresh this page.</p>
+            <p className="text-[#666] text-xs mt-2 break-all">{error}</p>
+          </div>
+        )}
+        {localError && <p className="text-red-400 text-xs">{localError}</p>}
+
+        <div className="admin-form-grid grid grid-cols-2 gap-4">
+          <div>
+            <label className="font-mono text-xs text-[#666] uppercase tracking-widest block mb-2">Contact label</label>
+            <input value={form.contact_kicker || ''} onChange={e => setField('contact_kicker', e.target.value)} className="w-full bg-[#111] border border-white/10 rounded px-3 py-2 text-sm text-[#e8e8e8] outline-none focus:border-white/30" />
+          </div>
+          <div>
+            <label className="font-mono text-xs text-[#666] uppercase tracking-widest block mb-2">Footer brand</label>
+            <input value={form.footer_brand || ''} onChange={e => setField('footer_brand', e.target.value)} className="w-full bg-[#111] border border-white/10 rounded px-3 py-2 text-sm text-[#e8e8e8] outline-none focus:border-white/30" />
+          </div>
+          <div className="col-span-2">
+            <label className="font-mono text-xs text-[#666] uppercase tracking-widest block mb-2">Contact headline</label>
+            <input value={form.contact_headline || ''} onChange={e => setField('contact_headline', e.target.value)} className="w-full bg-[#111] border border-white/10 rounded px-3 py-2 text-sm text-[#e8e8e8] outline-none focus:border-white/30" />
+          </div>
+          <div className="col-span-2">
+            <label className="font-mono text-xs text-[#666] uppercase tracking-widest block mb-2">Contact body</label>
+            <textarea value={form.contact_body || ''} onChange={e => setField('contact_body', e.target.value)} rows={3} className="w-full bg-[#111] border border-white/10 rounded px-3 py-2 text-sm text-[#e8e8e8] outline-none focus:border-white/30" />
+          </div>
+        </div>
+
+        <div className="admin-form-grid grid grid-cols-2 gap-4">
+          <div>
+            <label className="font-mono text-xs text-[#666] uppercase tracking-widest block mb-2">Email</label>
+            <input type="email" value={form.email || ''} onChange={e => setField('email', e.target.value)} className="w-full bg-[#111] border border-white/10 rounded px-3 py-2 text-sm text-[#e8e8e8] outline-none focus:border-white/30" />
+          </div>
+          <div>
+            <label className="font-mono text-xs text-[#666] uppercase tracking-widest block mb-2">Email button label</label>
+            <input value={form.email_button_label || ''} onChange={e => setField('email_button_label', e.target.value)} className="w-full bg-[#111] border border-white/10 rounded px-3 py-2 text-sm text-[#e8e8e8] outline-none focus:border-white/30" />
+          </div>
+          <div>
+            <label className="font-mono text-xs text-[#666] uppercase tracking-widest block mb-2">WhatsApp display</label>
+            <input value={form.whatsapp_display || ''} onChange={e => setField('whatsapp_display', e.target.value)} className="w-full bg-[#111] border border-white/10 rounded px-3 py-2 text-sm text-[#e8e8e8] outline-none focus:border-white/30" />
+          </div>
+          <div>
+            <label className="font-mono text-xs text-[#666] uppercase tracking-widest block mb-2">WhatsApp button label</label>
+            <input value={form.whatsapp_button_label || ''} onChange={e => setField('whatsapp_button_label', e.target.value)} className="w-full bg-[#111] border border-white/10 rounded px-3 py-2 text-sm text-[#e8e8e8] outline-none focus:border-white/30" />
+          </div>
+          <div className="col-span-2">
+            <label className="font-mono text-xs text-[#666] uppercase tracking-widest block mb-2">WhatsApp URL</label>
+            <input value={form.whatsapp_url || ''} onChange={e => setField('whatsapp_url', e.target.value)} className="w-full bg-[#111] border border-white/10 rounded px-3 py-2 text-sm text-[#e8e8e8] outline-none focus:border-white/30" />
+          </div>
+          <div>
+            <label className="font-mono text-xs text-[#666] uppercase tracking-widest block mb-2">Address</label>
+            <input value={form.address || ''} onChange={e => setField('address', e.target.value)} className="w-full bg-[#111] border border-white/10 rounded px-3 py-2 text-sm text-[#e8e8e8] outline-none focus:border-white/30" />
+          </div>
+          <div>
+            <label className="font-mono text-xs text-[#666] uppercase tracking-widest block mb-2">Hours</label>
+            <input value={form.hours || ''} onChange={e => setField('hours', e.target.value)} className="w-full bg-[#111] border border-white/10 rounded px-3 py-2 text-sm text-[#e8e8e8] outline-none focus:border-white/30" />
+          </div>
+        </div>
+
+        <div className="admin-form-grid grid grid-cols-2 gap-4">
+          <div className="col-span-2">
+            <p className="font-mono text-xs text-[#666] uppercase tracking-widest">Homepage booking CTA</p>
+          </div>
+          <div className="col-span-2">
+            <label className="font-mono text-xs text-[#666] uppercase tracking-widest block mb-2">Heading</label>
+            <textarea value={form.book_heading || ''} onChange={e => setField('book_heading', e.target.value)} rows={2} className="w-full bg-[#111] border border-white/10 rounded px-3 py-2 text-sm text-[#e8e8e8] outline-none focus:border-white/30" />
+          </div>
+          <div>
+            <label className="font-mono text-xs text-[#666] uppercase tracking-widest block mb-2">Email CTA label</label>
+            <input value={form.book_email_label || ''} onChange={e => setField('book_email_label', e.target.value)} className="w-full bg-[#111] border border-white/10 rounded px-3 py-2 text-sm text-[#e8e8e8] outline-none focus:border-white/30" />
+          </div>
+          <div>
+            <label className="font-mono text-xs text-[#666] uppercase tracking-widest block mb-2">WhatsApp CTA label</label>
+            <input value={form.book_whatsapp_label || ''} onChange={e => setField('book_whatsapp_label', e.target.value)} className="w-full bg-[#111] border border-white/10 rounded px-3 py-2 text-sm text-[#e8e8e8] outline-none focus:border-white/30" />
+          </div>
+        </div>
+
+        <div className="space-y-4">
+          <div className="flex items-center justify-between gap-4">
+            <p className="font-mono text-xs text-[#666] uppercase tracking-widest">Social links</p>
+            <button type="button" onClick={addSocial} className="text-xs text-[#f5e6d3] hover:text-white">+ Add link</button>
+          </div>
+
+          {form.socials.map((social, index) => (
+            <div key={index} className="admin-card border border-white/6 rounded-lg p-4 space-y-3">
+              <div className="admin-form-grid grid grid-cols-2 gap-3">
+                <input placeholder="Label" value={social.label || ''} onChange={e => updateSocial(index, 'label', e.target.value)} className="w-full bg-[#111] border border-white/10 rounded px-3 py-2 text-sm text-[#e8e8e8] outline-none focus:border-white/30" />
+                <input placeholder="Display value" value={social.value || ''} onChange={e => updateSocial(index, 'value', e.target.value)} className="w-full bg-[#111] border border-white/10 rounded px-3 py-2 text-sm text-[#e8e8e8] outline-none focus:border-white/30" />
+                <input placeholder="URL" value={social.href || ''} onChange={e => updateSocial(index, 'href', e.target.value)} className="w-full bg-[#111] border border-white/10 rounded px-3 py-2 text-sm text-[#e8e8e8] outline-none focus:border-white/30" />
+                <input placeholder="Footer label" value={social.footer_label || ''} onChange={e => updateSocial(index, 'footer_label', e.target.value)} className="w-full bg-[#111] border border-white/10 rounded px-3 py-2 text-sm text-[#e8e8e8] outline-none focus:border-white/30" />
+              </div>
+              <div className="flex items-center justify-between gap-4">
+                <label className="inline-flex items-center gap-2 text-xs text-[#888]">
+                  <input type="checkbox" checked={social.show_footer !== false} onChange={e => updateSocial(index, 'show_footer', e.target.checked)} />
+                  Show in footer
+                </label>
+                <button type="button" onClick={() => removeSocial(index)} className="text-red-800 hover:text-red-500 text-xs">Remove</button>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <button
+          type="submit"
+          disabled={saving}
+          className="bg-[#f5e6d3] text-[#0a0a0a] px-5 py-2.5 text-xs font-medium rounded disabled:opacity-40"
+        >
+          {saving ? 'Saving...' : 'Save contact content'}
+        </button>
+      </form>
+    </div>
+  );
+}
+
 function LogoManager({ logos, onRefresh }) {
   const [name, setName] = useState('');
   const [sortOrder, setSortOrder] = useState('99');
@@ -2316,6 +2579,8 @@ export default function AdminPage() {
   const [btsImagesError, setBtsImagesError] = useState('');
   const [bannerContent, setBannerContent] = useState(null);
   const [bannerContentError, setBannerContentError] = useState('');
+  const [contactContent, setContactContent] = useState(null);
+  const [contactContentError, setContactContentError] = useState('');
   const [founderContent, setFounderContent] = useState(null);
   const [founderContentError, setFounderContentError] = useState('');
   const [logos, setLogos] = useState([]);
@@ -2329,7 +2594,7 @@ export default function AdminPage() {
   }, []);
 
   useEffect(() => {
-    if (session) { fetchProjects(); fetchBtsItems(); fetchBtsImages(); fetchBannerContent(); fetchFounderContent(); fetchLogos(); }
+    if (session) { fetchProjects(); fetchBtsItems(); fetchBtsImages(); fetchBannerContent(); fetchContactContent(); fetchFounderContent(); fetchLogos(); }
   }, [session]);
 
   async function fetchProjects() {
@@ -2352,6 +2617,12 @@ export default function AdminPage() {
     const { data, error } = await supabase.from('banner_content').select('*').eq('id', 'main').maybeSingle();
     setBannerContent(data ?? null);
     setBannerContentError(error?.message || '');
+  }
+
+  async function fetchContactContent() {
+    const { data, error } = await supabase.from('contact_content').select('*').eq('id', 'main').maybeSingle();
+    setContactContent(data ?? null);
+    setContactContentError(error?.message || '');
   }
 
   async function fetchFounderContent() {
@@ -2433,6 +2704,13 @@ export default function AdminPage() {
           content={bannerContent}
           error={bannerContentError}
           onRefresh={fetchBannerContent}
+        />
+      )}
+      {tab === 'contact' && (
+        <ContactManager
+          content={contactContent}
+          error={contactContentError}
+          onRefresh={fetchContactContent}
         />
       )}
       {tab === 'bts' && (

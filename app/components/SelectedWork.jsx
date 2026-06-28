@@ -5,7 +5,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import ScrollReveal from "./ScrollReveal";
 import WorkPreviewCard from "./WorkPreviewCard";
 
-const filters = ["ALL", "MUSIC", "BRAND", "CORPORATE", "EVENTS"];
+const categoryOrder = ["MUSIC", "BRAND", "CORPORATE", "EVENTS", "OUTREACH"];
 
 function ViewMoreCard({ active }) {
   const href = active === "ALL" ? "/work" : `/work?category=${encodeURIComponent(active)}`;
@@ -28,12 +28,22 @@ export default function SelectedWork({ projects = [] }) {
   const [trackOffset, setTrackOffset] = useState(0);
 
   const reelProjects = useMemo(() => projects.filter((p) => p.category !== "BTS"), [projects]);
+  const filters = useMemo(() => {
+    const available = new Set(reelProjects.map((project) => project.category).filter(Boolean));
+    const ordered = categoryOrder.filter((category) => available.has(category));
+    const custom = [...available].filter((category) => !categoryOrder.includes(category)).sort();
+    return ["ALL", ...ordered, ...custom];
+  }, [reelProjects]);
   const filtered = useMemo(
     () => (active === "ALL" ? reelProjects : reelProjects.filter((p) => p.category === active)),
     [active, reelProjects]
   );
   const homepageProjects = filtered.slice(0, 4);
   const showViewMore = filtered.length > 4 || active === "ALL";
+
+  useEffect(() => {
+    if (!filters.includes(active)) setActive("ALL");
+  }, [active, filters]);
 
   useEffect(() => {
     function measure() {
@@ -102,7 +112,7 @@ export default function SelectedWork({ projects = [] }) {
 
           <div className="selected-work-title-row">
             <h2>The reel.</h2>
-            <p>Four sharp cuts from the archive. Scroll through the row, then open the full body of work.</p>
+            <p>A moving archive of films, campaigns, and moments built to stay with the viewer.</p>
           </div>
         </ScrollReveal>
 
